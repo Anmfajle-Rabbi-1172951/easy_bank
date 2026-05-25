@@ -120,6 +120,7 @@ def init_db():
     add_column_if_missing(conn, "transactions", "balance_after", "balance_after REAL")
     add_column_if_missing(conn, "customers", "username", "username TEXT")
     add_column_if_missing(conn, "customers", "password_hash", "password_hash TEXT")
+    add_column_if_missing(conn, "enquiries", "is_read", "is_read INTEGER NOT NULL DEFAULT 0")
 
     manager = conn.execute("SELECT * FROM manager_settings WHERE id=1").fetchone()
     if manager is None:
@@ -254,6 +255,14 @@ def create_pdf_response(title, subtitle, table_data, filename):
 
 @app.context_processor
 def inject_bank_details():
+    unread_count = 0
+    if is_manager_logged_in():
+        try:
+            conn = get_db_connection()
+            unread_count = conn.execute("SELECT COUNT(*) FROM enquiries WHERE is_read=0").fetchone()[0]
+            conn.close()
+        except Exception:
+            pass
     return dict(
         bank_name=BANK_NAME,
         branch_name=BRANCH_NAME,
@@ -267,6 +276,7 @@ def inject_bank_details():
         customer_logged_in=is_customer_logged_in(),
         logged_customer_id=get_logged_customer_id(),
         logged_customer_name=session.get("customer_name"),
+        unread_inbox_count=unread_count,
     )
 
 
@@ -813,6 +823,57 @@ def contact_page():
         flash("Thank you. Your enquiry has been submitted successfully.", "success")
         return redirect(url_for("contact_page"))
     return render_template("contact.html")
+
+
+@app.route("/manager/inbox")
+@manager_login_required
+def manager_inbox():
+    conn = get_db_connection()
+    enquiries = conn.execute("SELECT * FROM enquiries ORDER BY id DESC").fetchall()
+    conn.close()
+    return render_template("manager_inbox.html", enquiries=enquiries)
+
+
+@app.route("/manager/inbox/<int:enquiry_id>/read", methods=["POST"])
+@manager_login_required
+def mark_enquiry_read(enquiry_id):
+    conn = get_db_connection()
+    conn.execute("UPDATE enquiries SET is_read=1 WHERE enquiry_id=?", (enquiry_id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for("manager_inbox"))
+
+
+@app.route("/manager/inbox/<int:enquiry_id>/unread", methods=["POST"])
+@manager_login_required
+def mark_enquiry_unread(enquiry_id):
+    conn = get_db_connection()
+    conn.execute("UPDATE enquiries SET is_read=0 WHERE enquiry_id=?", (enquiry_id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for("manager_inbox"))
+
+
+@app.route("/manager/inbox/mark-all-read", methods=["POST"])
+@manager_login_required
+def mark_all_read():
+    conn = get_db_connection()
+    conn.execute("UPDATE enquiries SET is_read=1")
+    conn.commit()
+    conn.close()
+    flash("All messages marked as read.", "success")
+    return redirect(url_for("manager_inbox"))
+
+
+@app.route("/manager/inbox/<int:enquiry_id>/delete", methods=["POST"])
+@manager_login_required
+def delete_enquiry(enquiry_id):
+    conn = get_db_connection()
+    conn.execute("DELETE FROM enquiries WHERE enquiry_id=?", (enquiry_id,))
+    conn.commit()
+    conn.close()
+    flash("Message deleted.", "success")
+    return redirect(url_for("manager_inbox"))
 
 
 init_db()

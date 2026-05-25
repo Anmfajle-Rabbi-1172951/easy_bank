@@ -345,3 +345,91 @@ h5.card-title, .card h5 {
     .bank-header h1 { font-size: 1.45rem; }
     .stat-card h2 { font-size: 1.55rem; }
 }
+
+/* ============================================================
+   Sticky Navbar
+   ============================================================ */
+.sticky-top {
+    /* Bootstrap sticky-top sets position:sticky; top:0; z-index:1020 */
+    z-index: 1030;
+}
+
+/* Ensure the header shadow doesn't look odd below sticky nav */
+.bank-header {
+    position: relative;
+    z-index: 1;
+}
+
+/* ============================================================
+   Inbox Nav Badge
+   ============================================================ */
+.inbox-nav-link {
+    position: relative;
+}
+
+.inbox-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    background: #e74c3c;
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    border-radius: 999px;
+    margin-left: 5px;
+    vertical-align: middle;
+    line-height: 1;
+    box-shadow: 0 1px 4px rgba(231,76,60,0.45);
+}
+
+/* Pulse animation for unread badge */
+@keyframes inbox-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(231,76,60,0.55); }
+    70%  { box-shadow: 0 0 0 7px rgba(231,76,60,0); }
+    100% { box-shadow: 0 0 0 0 rgba(231,76,60,0); }
+}
+.inbox-badge {
+    animation: inbox-pulse 2s infinite;
+}
+
+/* ============================================================
+   Inbox Cards
+   ============================================================ */
+.inbox-card {
+    border-left: 4px solid var(--eb-card-border);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.inbox-card.inbox-unread {
+    border-left-color: #e74c3c;
+    background: #fffbfb;
+}
+
+.inbox-avatar {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--eb-primary) 0%, var(--eb-primary-lt) 100%);
+    color: #fff;
+    font-size: 1.2rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.inbox-message-box {
+    background: #f7faf9;
+    border: 1px solid #e0eae7;
+    border-radius: 10px;
+    padding: 12px 16px;
+}
+
+.inbox-message-box.inbox-note {
+    background: #fdfaf3;
+    border-color: #f0e8ce;
+}

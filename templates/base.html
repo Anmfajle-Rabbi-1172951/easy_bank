@@ -8,7 +8,9 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-<nav class="navbar navbar-expand-lg bank-navbar">
+
+<!-- STICKY NAVBAR -->
+<nav class="navbar navbar-expand-lg bank-navbar sticky-top">
     <div class="container">
         <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="{{ url_for('home') }}">
             <img src="{{ url_for('static', filename='images/easy_bank_logo.png') }}" alt="Easy Bank logo" class="navbar-logo">
@@ -18,33 +20,47 @@
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav ms-auto">
+            <ul class="navbar-nav ms-auto align-items-lg-center">
                 <li class="nav-item"><a class="nav-link" href="{{ url_for('home') }}">Dashboard</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('add_customer') }}">Register Customer</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('add_customer') }}">Register</a></li>
+
                 {% if manager_logged_in %}
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('customers_page') }}">Customers</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('accounts_page') }}">Accounts</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('transactions_page') }}">Transactions</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('transfer_page') }}">Transfer</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('manager_settings_page') }}">Manager Settings</a></li>
+                    <!-- INBOX with unread badge -->
+                    <li class="nav-item">
+                        <a class="nav-link inbox-nav-link" href="{{ url_for('manager_inbox') }}">
+                            Inbox
+                            {% if unread_inbox_count > 0 %}
+                                <span class="inbox-badge">{{ unread_inbox_count }}</span>
+                            {% endif %}
+                        </a>
+                    </li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('manager_settings_page') }}">Settings</a></li>
                 {% endif %}
+
                 {% if customer_logged_in %}
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('customer_dashboard') }}">My Account</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('customer_transfer_page') }}">Transfer</a></li>
                 {% endif %}
+
                 <li class="nav-item"><a class="nav-link" href="{{ url_for('reports_page') }}">Reports</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('contact_page') }}">Contact Us</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('contact_page') }}">Contact</a></li>
+
                 {% if manager_logged_in or customer_logged_in %}
                     <li class="nav-item"><a class="nav-link manager-badge" href="{{ url_for('logout_page') }}">Logout</a></li>
                 {% else %}
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('customer_login_page') }}">Customer Login</a></li>
-                    <li class="nav-item"><a class="nav-link manager-badge" href="{{ url_for('login_page') }}">Manager Login</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('customer_login_page') }}">Login</a></li>
+                    <li class="nav-item"><a class="nav-link manager-badge" href="{{ url_for('login_page') }}">Manager</a></li>
                 {% endif %}
             </ul>
         </div>
     </div>
 </nav>
 
+<!-- PAGE HEADER (not sticky – scrolls with page) -->
 <header class="bank-header">
     <div class="container py-4">
         <div class="row align-items-center g-3">
