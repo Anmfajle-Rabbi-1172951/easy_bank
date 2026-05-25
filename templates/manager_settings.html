@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<h2 class="mb-3">Manager Settings</h2>
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5>Change Manager Username and Password</h5>
+                <p class="text-muted">Current username: <strong>{{ manager.username }}</strong></p>
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">Current Password</label>
+                        <input type="password" name="current_password" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">New Username</label>
+                        <input type="text" name="new_username" class="form-control" value="{{ manager.username }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">New Password</label>
+                        <input type="password" name="new_password" class="form-control" minlength="8" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Confirm New Password</label>
+                        <input type="password" name="confirm_password" class="form-control" minlength="8" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Update Login Details</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

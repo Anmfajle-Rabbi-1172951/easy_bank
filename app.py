@@ -3,6 +3,7 @@ from datetime import datetime, date
 from pathlib import Path
 from io import BytesIO
 from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash, check_password_hash
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet
@@ -13,11 +14,6 @@ from functools import wraps
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("EASY_BANK_SECRET_KEY", "easy-bank-dev-secret-change-this")
-
-# Manager login credentials.
-# For better security on PythonAnywhere, you can set these as environment variables later.
-MANAGER_USERNAME = os.environ.get("EASY_BANK_MANAGER_USERNAME", "manager")
-MANAGER_PASSWORD = os.environ.get("EASY_BANK_MANAGER_PASSWORD", "EasyBank@2026!")
 
 BANK_NAME = "Easy Bank"
 BRANCH_NAME = "Lincoln Branch"
@@ -106,6 +102,14 @@ def init_db():
             created_at TEXT NOT NULL
         )
     """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS manager_settings (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            username TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
 
     # Migration support for old Easy Bank database files
     add_column_if_missing(conn, "accounts", "opened_date", "opened_date TEXT")
@@ -114,6 +118,15 @@ def init_db():
     add_column_if_missing(conn, "transactions", "to_account_number", "to_account_number TEXT")
     add_column_if_missing(conn, "transactions", "comment", "comment TEXT")
     add_column_if_missing(conn, "transactions", "balance_after", "balance_after REAL")
+    add_column_if_missing(conn, "customers", "username", "username TEXT")
+    add_column_if_missing(conn, "customers", "password_hash", "password_hash TEXT")
+
+    manager = conn.execute("SELECT * FROM manager_settings WHERE id=1").fetchone()
+    if manager is None:
+        conn.execute(
+            "INSERT INTO manager_settings (id, username, password_hash, updated_at) VALUES (1, ?, ?, ?)",
+            ("manager", generate_password_hash("EasyBank@2026!"), display_datetime())
+        )
 
     today_iso = date.today().isoformat()
     conn.execute("UPDATE accounts SET opened_date=? WHERE opened_date IS NULL OR opened_date=''", (today_iso,))
@@ -169,6 +182,24 @@ def today_iso():
 
 def is_manager_logged_in():
     return session.get("manager_logged_in") is True
+
+
+def is_customer_logged_in():
+    return session.get("customer_logged_in") is True
+
+
+def get_logged_customer_id():
+    return session.get("customer_id")
+
+
+def customer_login_required(view_function):
+    @wraps(view_function)
+    def wrapped_view(*args, **kwargs):
+        if not is_customer_logged_in():
+            flash("Please login to your customer account first.", "warning")
+            return redirect(url_for("customer_login_page", next=request.path))
+        return view_function(*args, **kwargs)
+    return wrapped_view
 
 
 def manager_login_required(view_function):
@@ -233,6 +264,9 @@ def inject_bank_details():
         branch_manager=BRANCH_MANAGER,
         today_date=today_iso(),
         manager_logged_in=is_manager_logged_in(),
+        customer_logged_in=is_customer_logged_in(),
+        logged_customer_id=get_logged_customer_id(),
+        logged_customer_name=session.get("customer_name"),
     )
 
 
@@ -247,7 +281,11 @@ def login_page():
         password = request.form.get("password", "")
         next_page = request.form.get("next") or url_for("home")
 
-        if username == MANAGER_USERNAME and password == MANAGER_PASSWORD:
+        conn = get_db_connection()
+        manager = conn.execute("SELECT * FROM manager_settings WHERE id=1").fetchone()
+        conn.close()
+        if manager and username == manager["username"] and check_password_hash(manager["password_hash"], password):
+            session.clear()
             session["manager_logged_in"] = True
             session["manager_username"] = username
             flash("Manager login successful.", "success")
@@ -264,18 +302,92 @@ def logout_page():
     flash("You have logged out successfully.", "success")
     return redirect(url_for("home"))
 
+
+@app.route("/customer-login", methods=["GET", "POST"])
+def customer_login_page():
+    if is_customer_logged_in():
+        return redirect(url_for("customer_dashboard"))
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+        next_page = request.form.get("next") or url_for("customer_dashboard")
+        conn = get_db_connection()
+        customer = conn.execute("SELECT * FROM customers WHERE lower(username)=lower(?)", (username,)).fetchone()
+        conn.close()
+        if customer and customer["password_hash"] and check_password_hash(customer["password_hash"], password):
+            session.clear()
+            session["customer_logged_in"] = True
+            session["customer_id"] = customer["customer_id"]
+            session["customer_name"] = customer["full_name"]
+            flash("Customer login successful.", "success")
+            return redirect(next_page)
+        flash("Invalid customer username or password.", "danger")
+    return render_template("customer_login.html", next=request.args.get("next", ""))
+
+
+@app.route("/my-dashboard")
+@customer_login_required
+def customer_dashboard():
+    conn = get_db_connection()
+    customer = conn.execute("SELECT * FROM customers WHERE customer_id=?", (get_logged_customer_id(),)).fetchone()
+    account = conn.execute("SELECT * FROM accounts WHERE customer_id=?", (get_logged_customer_id(),)).fetchone()
+    transactions = []
+    if account:
+        transactions = conn.execute("SELECT * FROM transactions WHERE account_number=? ORDER BY id DESC LIMIT 20", (account["account_number"],)).fetchall()
+    conn.close()
+    return render_template("customer_dashboard.html", customer=customer, account=account, transactions=transactions)
+
+
+@app.route("/manager/settings", methods=["GET", "POST"])
+@manager_login_required
+def manager_settings_page():
+    conn = get_db_connection()
+    manager = conn.execute("SELECT * FROM manager_settings WHERE id=1").fetchone()
+    if request.method == "POST":
+        current_password = request.form.get("current_password", "")
+        new_username = request.form.get("new_username", "").strip()
+        new_password = request.form.get("new_password", "")
+        confirm_password = request.form.get("confirm_password", "")
+        if not manager or not check_password_hash(manager["password_hash"], current_password):
+            flash("Current manager password is incorrect.", "danger")
+        elif not new_username or not new_password:
+            flash("New username and new password are required.", "danger")
+        elif len(new_password) < 8:
+            flash("New password must be at least 8 characters.", "danger")
+        elif new_password != confirm_password:
+            flash("New password and confirm password do not match.", "danger")
+        else:
+            conn.execute("UPDATE manager_settings SET username=?, password_hash=?, updated_at=? WHERE id=1", (new_username, generate_password_hash(new_password), display_datetime()))
+            conn.commit()
+            session["manager_username"] = new_username
+            flash("Manager login details updated successfully.", "success")
+            manager = conn.execute("SELECT * FROM manager_settings WHERE id=1").fetchone()
+    conn.close()
+    return render_template("manager_settings.html", manager=manager)
+
 @app.route("/")
 def home():
     conn = get_db_connection()
-    total_customers = conn.execute("SELECT COUNT(*) FROM customers").fetchone()[0]
-    total_accounts = conn.execute("SELECT COUNT(*) FROM accounts").fetchone()[0]
-    total_transactions = conn.execute("SELECT COUNT(*) FROM transactions").fetchone()[0]
-    total_balance = conn.execute("SELECT COALESCE(SUM(balance), 0) FROM accounts").fetchone()[0]
+    if is_manager_logged_in():
+        total_customers = conn.execute("SELECT COUNT(*) FROM customers").fetchone()[0]
+        total_accounts = conn.execute("SELECT COUNT(*) FROM accounts").fetchone()[0]
+        total_transactions = conn.execute("SELECT COUNT(*) FROM transactions").fetchone()[0]
+        total_balance = conn.execute("SELECT COALESCE(SUM(balance), 0) FROM accounts").fetchone()[0]
+    elif is_customer_logged_in():
+        account = conn.execute("SELECT * FROM accounts WHERE customer_id=?", (get_logged_customer_id(),)).fetchone()
+        total_customers = 1
+        total_accounts = 1 if account else 0
+        total_transactions = conn.execute("SELECT COUNT(*) FROM transactions WHERE account_number=?", (account["account_number"],)).fetchone()[0] if account else 0
+        total_balance = account["balance"] if account else 0
+    else:
+        total_customers = total_accounts = total_transactions = 0
+        total_balance = 0
     conn.close()
     return render_template("home.html", total_customers=total_customers, total_accounts=total_accounts, total_transactions=total_transactions, total_balance=total_balance)
 
 
 @app.route("/customers")
+@manager_login_required
 def customers_page():
     conn = get_db_connection()
     customers = conn.execute("SELECT * FROM customers ORDER BY id DESC").fetchall()
@@ -284,7 +396,6 @@ def customers_page():
 
 
 @app.route("/customers/add", methods=["GET", "POST"])
-@manager_login_required
 def add_customer():
     if request.method == "POST":
         full_name = request.form.get("full_name", "").strip()
@@ -294,14 +405,23 @@ def add_customer():
         date_of_birth = request.form.get("date_of_birth", "").strip()
         occupation = request.form.get("occupation", "").strip()
         id_number = request.form.get("id_number", "").strip()
-        status = request.form.get("status", "Active")
+        status = "Inactive"
         sex = request.form.get("sex", "").strip()
         nationality = request.form.get("nationality", "").strip()
+        username = request.form.get("username", "").strip().lower()
+        password = request.form.get("password", "")
+        confirm_password = request.form.get("confirm_password", "")
         agree = request.form.get("agree")
-        required_fields = {"Full name": full_name, "Phone": phone, "Email": email, "Address": address, "Date of birth": date_of_birth, "Occupation": occupation, "ID number": id_number, "Sex": sex, "Nationality": nationality, "Status": status}
+        required_fields = {"Full name": full_name, "Phone": phone, "Email": email, "Address": address, "Date of birth": date_of_birth, "Occupation": occupation, "ID number": id_number, "Sex": sex, "Nationality": nationality, "Username": username, "Password": password}
         missing_fields = [label for label, value in required_fields.items() if not value]
         if missing_fields:
             flash("Please complete all required fields: " + ", ".join(missing_fields) + ".", "danger")
+            return render_template("add_customer.html")
+        if len(password) < 8:
+            flash("Password must be at least 8 characters.", "danger")
+            return render_template("add_customer.html")
+        if password != confirm_password:
+            flash("Password and confirm password do not match.", "danger")
             return render_template("add_customer.html")
         try:
             dob = datetime.strptime(date_of_birth, "%Y-%m-%d").date()
@@ -317,10 +437,10 @@ def add_customer():
             flash("Please tick the agreement box before saving the customer.", "danger")
             return render_template("add_customer.html")
         conn = get_db_connection()
-        duplicate = conn.execute("SELECT customer_id FROM customers WHERE lower(phone)=lower(?) OR lower(email)=lower(?) OR lower(id_number)=lower(?)", (phone, email, id_number)).fetchone()
+        duplicate = conn.execute("SELECT customer_id FROM customers WHERE lower(phone)=lower(?) OR lower(email)=lower(?) OR lower(id_number)=lower(?) OR lower(username)=lower(?)", (phone, email, id_number, username)).fetchone()
         if duplicate:
             conn.close()
-            flash("Phone, email, or ID number is already registered.", "danger")
+            flash("Phone, email, ID number, or username is already registered.", "danger")
             return render_template("add_customer.html")
         customer_id = generate_customer_id()
         photo_path = None
@@ -336,17 +456,50 @@ def add_customer():
             photo.save(UPLOAD_FOLDER / stored_filename)
             photo_path = f"uploads/customers/{stored_filename}"
         conn.execute("""
-            INSERT INTO customers (customer_id, full_name, phone, email, address, date_of_birth, occupation, id_number, status, sex, nationality, photo_path, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (customer_id, full_name, phone, email, address, date_of_birth, occupation, id_number, status, sex, nationality, photo_path, display_datetime()))
+            INSERT INTO customers (customer_id, full_name, phone, email, address, date_of_birth, occupation, id_number, status, sex, nationality, photo_path, created_at, username, password_hash)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (customer_id, full_name, phone, email, address, date_of_birth, occupation, id_number, status, sex, nationality, photo_path, display_datetime(), username, generate_password_hash(password)))
         conn.commit()
         conn.close()
-        flash(f"Customer added successfully. Customer ID: {customer_id}", "success")
-        return redirect(url_for("customers_page"))
+        flash(f"Customer registration submitted successfully. Your Customer ID is {customer_id}. Status is Inactive until manager approval.", "success")
+        if is_manager_logged_in():
+            return redirect(url_for("customers_page"))
+        return redirect(url_for("customer_login_page"))
     return render_template("add_customer.html")
 
 
+@app.route("/customers/<customer_id>/activate", methods=["POST"])
+@manager_login_required
+def activate_customer(customer_id):
+    conn = get_db_connection()
+    customer = conn.execute("SELECT * FROM customers WHERE customer_id=?", (customer_id,)).fetchone()
+    if customer is None:
+        flash("Customer not found.", "danger")
+    else:
+        conn.execute("UPDATE customers SET status='Active' WHERE customer_id=?", (customer_id,))
+        conn.commit()
+        flash(f"Customer {customer_id} is now Active.", "success")
+    conn.close()
+    return redirect(url_for("customers_page"))
+
+
+@app.route("/customers/<customer_id>/deactivate", methods=["POST"])
+@manager_login_required
+def deactivate_customer(customer_id):
+    conn = get_db_connection()
+    customer = conn.execute("SELECT * FROM customers WHERE customer_id=?", (customer_id,)).fetchone()
+    if customer is None:
+        flash("Customer not found.", "danger")
+    else:
+        conn.execute("UPDATE customers SET status='Inactive' WHERE customer_id=?", (customer_id,))
+        conn.commit()
+        flash(f"Customer {customer_id} is now Inactive.", "success")
+    conn.close()
+    return redirect(url_for("customers_page"))
+
+
 @app.route("/accounts")
+@manager_login_required
 def accounts_page():
     conn = get_db_connection()
     accounts = conn.execute("SELECT * FROM accounts ORDER BY id DESC").fetchall()
@@ -365,6 +518,10 @@ def open_account():
             conn.close()
             flash("Customer ID not found. Please enter a valid Customer ID, for example EB-C0001.", "danger")
             return redirect(url_for("open_account"))
+        if customer["status"] != "Active":
+            conn.close()
+            flash("This customer is Inactive. Manager must activate the customer before opening an account.", "warning")
+            return redirect(url_for("customers_page"))
         existing_account = conn.execute("SELECT * FROM accounts WHERE upper(customer_id)=?", (customer_id,)).fetchone()
         if existing_account:
             conn.close()
@@ -383,6 +540,7 @@ def open_account():
 
 
 @app.route("/transactions", methods=["GET", "POST"])
+@manager_login_required
 def transactions_page():
     conn = get_db_connection()
     if request.method == "POST":
@@ -422,6 +580,7 @@ def transactions_page():
 
 
 @app.route("/transfer", methods=["GET", "POST"])
+@manager_login_required
 def transfer_page():
     conn = get_db_connection()
     if request.method == "POST":
@@ -486,14 +645,24 @@ def reports_page():
 
 @app.route("/reports/account-statement", methods=["GET", "POST"])
 def account_statement_report():
+    if not is_manager_logged_in() and not is_customer_logged_in():
+        flash("Please login as customer or manager to download an account statement.", "warning")
+        return redirect(url_for("customer_login_page", next=url_for("account_statement_report")))
     conn = get_db_connection()
-    accounts = conn.execute("SELECT * FROM accounts ORDER BY account_number").fetchall()
+    if is_manager_logged_in():
+        accounts = conn.execute("SELECT * FROM accounts ORDER BY account_number").fetchall()
+    else:
+        accounts = conn.execute("SELECT * FROM accounts WHERE customer_id=? ORDER BY account_number", (get_logged_customer_id(),)).fetchall()
     if request.method == "POST":
-        account_number = request.form.get("account_number", "").strip()
+        if is_manager_logged_in():
+            account_number = request.form.get("account_number", "").strip()
+        else:
+            account = conn.execute("SELECT * FROM accounts WHERE customer_id=?", (get_logged_customer_id(),)).fetchone()
+            account_number = account["account_number"] if account else ""
         start_date = request.form.get("start_date", "").strip()
         if not account_number or not start_date:
             conn.close()
-            flash("Please select account number and start date.", "danger")
+            flash("Please select account number and start date. If you do not have an account yet, contact the branch manager.", "danger")
             return redirect(url_for("account_statement_report"))
         try:
             selected_start = datetime.strptime(start_date, "%Y-%m-%d").date()
@@ -505,7 +674,14 @@ def account_statement_report():
             conn.close()
             flash("Start date cannot be after today.", "danger")
             return redirect(url_for("account_statement_report"))
-        account = conn.execute("SELECT * FROM accounts WHERE account_number=?", (account_number,)).fetchone()
+        if is_customer_logged_in() and not is_manager_logged_in():
+            account = conn.execute("SELECT * FROM accounts WHERE account_number=? AND customer_id=?", (account_number, get_logged_customer_id())).fetchone()
+        else:
+            account = conn.execute("SELECT * FROM accounts WHERE account_number=?", (account_number,)).fetchone()
+        if account is None:
+            conn.close()
+            flash("Account not found or you do not have permission to view it.", "danger")
+            return redirect(url_for("account_statement_report"))
         transactions = conn.execute("""
             SELECT * FROM transactions
             WHERE account_number=? AND transaction_date BETWEEN ? AND ?
@@ -515,13 +691,14 @@ def account_statement_report():
         rows = [["Date", "Type", "Amount", "From", "To", "Balance After", "Comment"]]
         for t in transactions:
             rows.append([t["created_at"], t["transaction_type"], f"${t['amount']:.2f}", t["from_account_number"] or "-", t["to_account_number"] or "-", f"${(t['balance_after'] or 0):.2f}", t["comment"] or "-"])
-        subtitle = f"Account: {account_number} | Customer: {account['customer_name'] if account else '-'} | Period: {start_date} to {today_iso()} | Current Balance: ${account['balance'] if account else 0:.2f}"
+        subtitle = f"Account: {account_number} | Customer: {account['customer_name']} | Period: {start_date} to {today_iso()} | Current Balance: ${account['balance']:.2f}"
         return create_pdf_response("Account Statement", subtitle, rows, f"statement_{account_number}_{today_iso()}.pdf")
     conn.close()
     return render_template("account_statement.html", accounts=accounts)
 
 
 @app.route("/reports/management", methods=["GET", "POST"])
+@manager_login_required
 def management_report():
     if request.method == "POST":
         report_type = request.form.get("report_type", "all")

@@ -1,30 +1,40 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="report-page-heading mb-3">
-    <img src="{{ url_for('static', filename='images/easy_bank_logo.png') }}" alt="Easy Bank logo" class="report-logo">
-    <div>
-        <p class="small-label mb-1">{{ tagline }}</p>
-        <h2 class="mb-0">Internal Reports</h2>
-    </div>
-</div>
+<h2 class="mb-3">Reports</h2>
 <div class="row g-4">
     <div class="col-md-6">
         <div class="card shadow-sm h-100">
             <div class="card-body">
                 <h5>Account Statement PDF</h5>
-                <p class="text-muted">Generate a PDF statement from a selected start date up to today's date automatically.</p>
-                <a href="{{ url_for('account_statement_report') }}" class="btn btn-primary">Create Statement</a>
+                <p class="text-muted">Customers can download only their own account statement. Manager can download statements for any account.</p>
+                {% if manager_logged_in or customer_logged_in %}
+                    <a href="{{ url_for('account_statement_report') }}" class="btn btn-primary">Open Statement Tool</a>
+                {% else %}
+                    <a href="{{ url_for('customer_login_page') }}" class="btn btn-primary">Customer Login Required</a>
+                {% endif %}
             </div>
         </div>
     </div>
+    {% if manager_logged_in %}
     <div class="col-md-6">
         <div class="card shadow-sm h-100">
             <div class="card-body">
-                <h5>Management Account Report PDF</h5>
-                <p class="text-muted">Generate accounts opened today or all savings accounts with name, account number, and balance.</p>
-                <a href="{{ url_for('management_report') }}" class="btn btn-primary">Create Management Report</a>
+                <h5>Management Report PDF</h5>
+                <p class="text-muted">Manager-only report for accounts opened today or all savings accounts.</p>
+                <a href="{{ url_for('management_report') }}" class="btn btn-primary">Open Management Reports</a>
             </div>
         </div>
     </div>
+    {% else %}
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h5>Management Reports</h5>
+                <p class="text-muted">Management reports are protected and only visible after manager login.</p>
+                <a href="{{ url_for('login_page') }}" class="btn btn-outline-secondary">Manager Login</a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

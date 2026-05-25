@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.sqlite3
+# Keep live DB outside git when updating PythonAnywhere if you want to preserve online data
+# easy_bank.db

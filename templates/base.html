@@ -20,15 +20,23 @@
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto">
                 <li class="nav-item"><a class="nav-link" href="{{ url_for('home') }}">Dashboard</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('customers_page') }}">Customers</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('accounts_page') }}">Accounts</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('transactions_page') }}">Transactions</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('transfer_page') }}">Transfer</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('add_customer') }}">Register Customer</a></li>
+                {% if manager_logged_in %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('customers_page') }}">Customers</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('accounts_page') }}">Accounts</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('transactions_page') }}">Transactions</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('transfer_page') }}">Transfer</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('manager_settings_page') }}">Manager Settings</a></li>
+                {% endif %}
+                {% if customer_logged_in %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('customer_dashboard') }}">My Account</a></li>
+                {% endif %}
                 <li class="nav-item"><a class="nav-link" href="{{ url_for('reports_page') }}">Reports</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ url_for('contact_page') }}">Contact Us</a></li>
-                {% if manager_logged_in %}
-                    <li class="nav-item"><a class="nav-link manager-badge" href="{{ url_for('logout_page') }}">Manager Logout</a></li>
+                {% if manager_logged_in or customer_logged_in %}
+                    <li class="nav-item"><a class="nav-link manager-badge" href="{{ url_for('logout_page') }}">Logout</a></li>
                 {% else %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('customer_login_page') }}">Customer Login</a></li>
                     <li class="nav-item"><a class="nav-link manager-badge" href="{{ url_for('login_page') }}">Manager Login</a></li>
                 {% endif %}
             </ul>
@@ -54,8 +62,10 @@
                 <p class="mb-1"><strong>Manager:</strong> {{ branch_manager }}</p>
                 {% if manager_logged_in %}
                     <span class="badge text-bg-success">Manager Mode Active</span>
+                {% elif customer_logged_in %}
+                    <span class="badge text-bg-primary">Customer: {{ logged_customer_name }}</span>
                 {% else %}
-                    <span class="badge text-bg-light">Public View Mode</span>
+                    <span class="badge text-bg-light">Public Registration Mode</span>
                 {% endif %}
             </div>
         </div>

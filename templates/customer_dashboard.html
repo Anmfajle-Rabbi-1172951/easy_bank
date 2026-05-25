@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block content %}
+<h2 class="mb-3">My Customer Dashboard</h2>
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5>My Profile</h5>
+                {% if customer.photo_path %}
+                    <img src="{{ url_for('static', filename=customer.photo_path) }}" class="img-fluid rounded mb-3" alt="Customer photo">
+                {% endif %}
+                <p><strong>Customer ID:</strong> {{ customer.customer_id }}</p>
+                <p><strong>Name:</strong> {{ customer.full_name }}</p>
+                <p><strong>Email:</strong> {{ customer.email }}</p>
+                <p><strong>Phone:</strong> {{ customer.phone }}</p>
+                <p><strong>Status:</strong>
+                    {% if customer.status == 'Active' %}<span class="badge text-bg-success">Active</span>{% else %}<span class="badge text-bg-danger">Inactive</span>{% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h5>My Savings Account</h5>
+                {% if account %}
+                    <div class="row">
+                        <div class="col-md-4"><strong>Account No.</strong><br>{{ account.account_number }}</div>
+                        <div class="col-md-4"><strong>Type</strong><br>{{ account.account_type }}</div>
+                        <div class="col-md-4"><strong>Balance</strong><br>${{ '%.2f'|format(account.balance) }}</div>
+                    </div>
+                    <hr>
+                    <a href="{{ url_for('account_statement_report') }}" class="btn btn-primary">Download Statement</a>
+                {% else %}
+                    <div class="alert alert-warning mb-0">Your customer profile is not connected to a savings account yet. Please wait for manager approval and account opening.</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5>Recent Transactions</h5>
+                {% if transactions %}
+                <div class="table-responsive">
+                    <table class="table table-striped align-middle">
+                        <thead><tr><th>ID</th><th>Type</th><th>Amount</th><th>Balance After</th><th>Date</th></tr></thead>
+                        <tbody>
+                        {% for t in transactions %}
+                        <tr>
+                            <td>{{ t.transaction_id }}</td>
+                            <td>{{ t.transaction_type }}</td>
+                            <td>${{ '%.2f'|format(t.amount) }}</td>
+                            <td>{% if t.balance_after is not none %}${{ '%.2f'|format(t.balance_after) }}{% else %}-{% endif %}</td>
+                            <td>{{ t.created_at }}</td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                    <p class="text-muted mb-0">No transactions found.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

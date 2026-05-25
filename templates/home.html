@@ -1,24 +1,30 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="row g-3 mb-4">
-    <div class="col-md-3"><div class="card stat-card"><h6>Total Customers</h6><h2>{{ total_customers }}</h2></div></div>
-    <div class="col-md-3"><div class="card stat-card"><h6>Total Accounts</h6><h2>{{ total_accounts }}</h2></div></div>
-    <div class="col-md-3"><div class="card stat-card"><h6>Transactions</h6><h2>{{ total_transactions }}</h2></div></div>
-    <div class="col-md-3"><div class="card stat-card"><h6>Total Balance</h6><h2>${{ '%.2f'|format(total_balance) }}</h2></div></div>
+    <div class="col-md-3"><div class="card stat-card"><h6>{% if manager_logged_in %}Total Customers{% else %}My Profile{% endif %}</h6><h2>{{ total_customers }}</h2></div></div>
+    <div class="col-md-3"><div class="card stat-card"><h6>{% if manager_logged_in %}Total Accounts{% else %}My Accounts{% endif %}</h6><h2>{{ total_accounts }}</h2></div></div>
+    <div class="col-md-3"><div class="card stat-card"><h6>{% if manager_logged_in %}Transactions{% else %}My Transactions{% endif %}</h6><h2>{{ total_transactions }}</h2></div></div>
+    <div class="col-md-3"><div class="card stat-card"><h6>{% if manager_logged_in %}Total Balance{% else %}My Balance{% endif %}</h6><h2>${{ '%.2f'|format(total_balance) }}</h2></div></div>
 </div>
 
 <div class="card shadow-sm">
     <div class="card-body">
         <h3>Welcome to Easy Bank</h3>
-        <p>This is a simple personal banking management web app for one head office and Lincoln Branch.</p>
+        <p>NZ only Lincoln based community bank. Customers can register online, then the manager will verify and activate the profile.</p>
         {% if manager_logged_in %}
-            <a href="{{ url_for('add_customer') }}" class="btn btn-primary">Add Customer</a>
+            <a href="{{ url_for('customers_page') }}" class="btn btn-primary">Review Customers</a>
             <a href="{{ url_for('open_account') }}" class="btn btn-outline-primary">Open Account</a>
             <a href="{{ url_for('transfer_page') }}" class="btn btn-outline-primary">Transfer</a>
+            <a href="{{ url_for('manager_settings_page') }}" class="btn btn-outline-secondary">Manager Settings</a>
+        {% elif customer_logged_in %}
+            <a href="{{ url_for('customer_dashboard') }}" class="btn btn-primary">My Dashboard</a>
+            <a href="{{ url_for('account_statement_report') }}" class="btn btn-outline-primary">Download My Statement</a>
         {% else %}
-            <a href="{{ url_for('login_page') }}" class="btn btn-primary">Manager Login</a>
+            <a href="{{ url_for('add_customer') }}" class="btn btn-primary">Register as Customer</a>
+            <a href="{{ url_for('customer_login_page') }}" class="btn btn-outline-primary">Customer Login</a>
+            <a href="{{ url_for('login_page') }}" class="btn btn-outline-secondary">Manager Login</a>
         {% endif %}
-        <a href="{{ url_for('reports_page') }}" class="btn btn-outline-primary">Reports</a>
+        <a href="{{ url_for('contact_page') }}" class="btn btn-outline-primary">Contact Us</a>
     </div>
 </div>
 {% endblock %}

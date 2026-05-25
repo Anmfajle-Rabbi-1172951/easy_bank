@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <h2 class="mb-3">Customer Login</h2>
+                <p class="text-muted">Login to view only your own Easy Bank profile, savings account, transactions, and statement.</p>
+                <form method="POST">
+                    <input type="hidden" name="next" value="{{ next }}">
+                    <div class="mb-3">
+                        <label class="form-label">Username</label>
+                        <input type="text" name="username" class="form-control" required autofocus>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Password</label>
+                        <input type="password" name="password" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Login</button>
+                </form>
+                <div class="alert alert-light border mt-3 mb-0">
+                    New customer? <a href="{{ url_for('add_customer') }}">Register here</a>. Your profile will be inactive until manager approval.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

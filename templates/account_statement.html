@@ -1,30 +1,32 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="report-page-heading mb-3">
-    <img src="{{ url_for('static', filename='images/easy_bank_logo.png') }}" alt="Easy Bank logo" class="report-logo">
-    <div>
-        <p class="small-label mb-1">{{ tagline }}</p>
-        <h2 class="mb-0">Account Statement PDF</h2>
-    </div>
-</div>
+<h2 class="mb-3">Account Statement PDF</h2>
 <div class="card shadow-sm">
     <div class="card-body">
         <form method="POST">
+            {% if manager_logged_in %}
             <div class="mb-3">
                 <label class="form-label">Account Number</label>
                 <select name="account_number" class="form-select" required>
                     <option value="">Select account</option>
                     {% for account in accounts %}
-                    <option value="{{ account.account_number }}">{{ account.account_number }} - {{ account.customer_name }}</option>
+                        <option value="{{ account.account_number }}">{{ account.account_number }} - {{ account.customer_name }}</option>
                     {% endfor %}
                 </select>
             </div>
+            {% else %}
+                {% if accounts %}
+                    <div class="alert alert-info">Your statement will be generated for account <strong>{{ accounts[0].account_number }}</strong>.</div>
+                {% else %}
+                    <div class="alert alert-warning">No savings account is linked with your customer profile yet.</div>
+                {% endif %}
+            {% endif %}
             <div class="mb-3">
                 <label class="form-label">Start Date</label>
                 <input type="date" name="start_date" class="form-control" max="{{ today_date }}" required>
-                <div class="form-text">End date will always be today's date automatically: {{ today_date }}.</div>
+                <div class="form-text">End date is always today's date: {{ today_date }}.</div>
             </div>
-            <button type="submit" class="btn btn-primary">Download Statement PDF</button>
+            <button type="submit" class="btn btn-primary" {% if not accounts %}disabled{% endif %}>Download Statement PDF</button>
             <a href="{{ url_for('reports_page') }}" class="btn btn-outline-secondary">Back to Reports</a>
         </form>
     </div>
