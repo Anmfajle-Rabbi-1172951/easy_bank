@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<h2 class="mb-3">Open Savings Account</h2>
+
+<div class="alert alert-info">
+    Enter the customer ID only. The system will verify the customer and open one Savings Account automatically.
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form method="POST">
+            <div class="mb-3">
+                <label class="form-label">Customer ID</label>
+                <input type="text" name="customer_id" class="form-control" placeholder="Example: EB-C0001" required>
+                <div class="form-text">Only an existing customer can open a savings account.</div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Account Type</label>
+                <input type="text" class="form-control" value="Savings Account" readonly>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Opening Balance</label>
+                <input type="text" class="form-control" value="$0.00" readonly>
+                <div class="form-text">After account opening, use Transactions page to deposit money.</div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Open Savings Account</button>
+            <a href="{{ url_for('customers_page') }}" class="btn btn-outline-secondary">View Customers</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

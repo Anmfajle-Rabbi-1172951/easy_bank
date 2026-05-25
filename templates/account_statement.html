@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<h2 class="mb-3">Account Statement PDF</h2>
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form method="POST">
+            <div class="mb-3">
+                <label class="form-label">Account Number</label>
+                <select name="account_number" class="form-select" required>
+                    <option value="">Select account</option>
+                    {% for account in accounts %}
+                    <option value="{{ account.account_number }}">{{ account.account_number }} - {{ account.customer_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Start Date</label>
+                <input type="date" name="start_date" class="form-control" max="{{ today_date }}" required>
+                <div class="form-text">End date will always be today's date automatically: {{ today_date }}.</div>
+            </div>
+            <button type="submit" class="btn btn-primary">Download Statement PDF</button>
+            <a href="{{ url_for('reports_page') }}" class="btn btn-outline-secondary">Back to Reports</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

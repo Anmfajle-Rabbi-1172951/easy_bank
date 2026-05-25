@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block content %}
+<h2 class="mb-3">Account to Account Transfer</h2>
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="mb-3">New Transfer</h5>
+                {% if accounts|length >= 2 %}
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">From Account</label>
+                        <select name="from_account" class="form-select" required>
+                            <option value="">Select sender account</option>
+                            {% for account in accounts %}
+                            <option value="{{ account.account_number }}">{{ account.account_number }} - {{ account.customer_name }} (${{ '%.2f'|format(account.balance) }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">To Account</label>
+                        <select name="to_account" class="form-select" required>
+                            <option value="">Select receiver account</option>
+                            {% for account in accounts %}
+                            <option value="{{ account.account_number }}">{{ account.account_number }} - {{ account.customer_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Amount</label>
+                        <input type="number" name="amount" class="form-control" min="0.01" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Comment</label>
+                        <textarea name="comment" class="form-control" rows="3" placeholder="Optional transfer note"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Submit Transfer</button>
+                </form>
+                {% else %}
+                <p class="text-muted mb-0">At least two savings accounts are needed for account-to-account transfer.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="mb-3">Recent Transfers</h5>
+                {% if recent_transfers %}
+                <div class="table-responsive">
+                    <table class="table table-striped align-middle">
+                        <thead>
+                            <tr><th>ID</th><th>Account</th><th>Type</th><th>Amount</th><th>From</th><th>To</th><th>Date</th></tr>
+                        </thead>
+                        <tbody>
+                        {% for t in recent_transfers %}
+                            <tr>
+                                <td>{{ t.transaction_id }}</td>
+                                <td>{{ t.account_number }}</td>
+                                <td>{{ t.transaction_type }}</td>
+                                <td>${{ '%.2f'|format(t.amount) }}</td>
+                                <td>{{ t.from_account_number or '-' }}</td>
+                                <td>{{ t.to_account_number or '-' }}</td>
+                                <td>{{ t.created_at }}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">No transfers yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

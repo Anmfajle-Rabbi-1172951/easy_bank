@@ -1,0 +1,103 @@
+body {
+    background: #f5f8f8;
+    color: #223131;
+}
+
+.bank-navbar {
+    background: #dceee9;
+    border-bottom: 1px solid #c7ddd8;
+}
+
+.bank-navbar .navbar-brand {
+    color: #1f4d45;
+}
+
+.bank-navbar .nav-link {
+    color: #2e5d56;
+    font-weight: 500;
+}
+
+.bank-navbar .nav-link:hover {
+    color: #0f2f2a;
+}
+
+.navbar-toggler {
+    border-color: #8fb9b0;
+}
+
+.bank-header {
+    background: linear-gradient(135deg, #dceee9, #eaf5fb, #eef1f0);
+    border-bottom: 4px solid #b8d7d1;
+    color: #1e403b;
+}
+
+.small-label {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid #c7ddd8;
+    border-radius: 999px;
+    padding: 6px 12px;
+    color: #355d58;
+    font-weight: 600;
+}
+
+.card {
+    border: 1px solid #e0e9e7;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(38, 64, 60, 0.06);
+}
+
+.btn-primary, .btn-success {
+    background: #5f9f91;
+    border-color: #5f9f91;
+}
+
+.btn-primary:hover, .btn-success:hover {
+    background: #4b887b;
+    border-color: #4b887b;
+}
+
+.btn-outline-primary {
+    color: #4b887b;
+    border-color: #7fb5aa;
+}
+
+.btn-outline-primary:hover {
+    background: #5f9f91;
+    border-color: #5f9f91;
+}
+
+.stat-card {
+    padding: 20px;
+}
+
+.stat-card h6 {
+    color: #6c7f7b;
+}
+
+.stat-card h2 {
+    color: #1f4d45;
+    font-weight: 700;
+}
+
+.customer-photo {
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 1px solid #cbdad7;
+}
+
+.bank-footer {
+    background: #2d3636;
+    color: #dceee9;
+}
+
+.form-control, .form-select {
+    border-color: #ccdcd9;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #7fb5aa;
+    box-shadow: 0 0 0 .2rem rgba(95, 159, 145, .18);
+}

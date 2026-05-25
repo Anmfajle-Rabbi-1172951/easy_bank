@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block content %}
+<h2 class="mb-3">Add Customer</h2>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form method="POST" enctype="multipart/form-data">
+            <div class="alert alert-info small">
+                Customer ID will be generated automatically and uniquely by the system.
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Full Name <span class="text-danger">*</span></label>
+                    <input type="text" name="full_name" class="form-control" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Phone <span class="text-danger">*</span></label>
+                    <input type="text" name="phone" class="form-control" required>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Email <span class="text-danger">*</span></label>
+                    <input type="email" name="email" class="form-control" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Date of Birth <span class="text-danger">*</span></label>
+                    <input type="date" name="date_of_birth" class="form-control" required>
+                    <div class="form-text">Customer must be 18 years or older.</div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Address <span class="text-danger">*</span></label>
+                <textarea name="address" class="form-control" rows="2" required></textarea>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Occupation <span class="text-danger">*</span></label>
+                    <input type="text" name="occupation" class="form-control" required>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">ID Number <span class="text-danger">*</span></label>
+                    <input type="text" name="id_number" class="form-control" placeholder="Passport / NID / Licence" required>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Nationality <span class="text-danger">*</span></label>
+                    <input type="text" name="nationality" class="form-control" required>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Sex <span class="text-danger">*</span></label>
+                    <select name="sex" class="form-select" required>
+                        <option value="">Select</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                        <option value="Prefer not to say">Prefer not to say</option>
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Status <span class="text-danger">*</span></label>
+                    <select name="status" class="form-select" required>
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Customer Photo Optional</label>
+                    <input type="file" name="photo" class="form-control" accept="image/*">
+                    <div class="form-text">Once saved, the uploaded photo is fixed for this customer.</div>
+                </div>
+            </div>
+
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" name="agree" id="agree" required>
+                <label class="form-check-label" for="agree">
+                    I confirm this customer information is correct and agreed by the customer.
+                </label>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Save Customer</button>
+            <a href="{{ url_for('customers_page') }}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+<h2 class="mb-3">Transactions</h2>
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card shadow-sm"><div class="card-body">
+            <h5>New Transaction</h5>
+            {% if accounts %}
+            <form method="POST">
+                <div class="mb-3">
+                    <label class="form-label">Account</label>
+                    <select name="account_number" class="form-select" required>
+                        <option value="">Select account</option>
+                        {% for account in accounts %}<option value="{{ account.account_number }}">{{ account.account_number }} - {{ account.customer_name }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Transaction Type</label>
+                    <select name="transaction_type" class="form-select" required>
+                        <option>Deposit</option>
+                        <option>Withdraw</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Amount</label>
+                    <input type="number" step="0.01" min="0.01" name="amount" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Submit</button>
+            </form>
+            {% else %}
+            <p class="text-muted">Please open an account first.</p>
+            {% endif %}
+        </div></div>
+    </div>
+    <div class="col-lg-7">
+        <div class="card shadow-sm"><div class="card-body">
+            <h5>Transaction History</h5>
+            {% if transactions %}
+            <table class="table table-striped align-middle">
+                <thead><tr><th>ID</th><th>Account</th><th>Type</th><th>Amount</th><th>Balance After</th><th>Date</th></tr></thead>
+                <tbody>{% for t in transactions %}<tr><td>{{ t.transaction_id }}</td><td>{{ t.account_number }}</td><td>{{ t.transaction_type }}</td><td>${{ '%.2f'|format(t.amount) }}</td><td>{% if t.balance_after is not none %}${{ '%.2f'|format(t.balance_after) }}{% else %}-{% endif %}</td><td>{{ t.created_at }}</td></tr>{% endfor %}</tbody>
+            </table>
+            {% else %}<p class="text-muted mb-0">No transactions yet.</p>{% endif %}
+        </div></div>
+    </div>
+</div>
+{% endblock %}

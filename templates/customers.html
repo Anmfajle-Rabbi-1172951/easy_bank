@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Customers</h2>
+    <a href="{{ url_for('add_customer') }}" class="btn btn-primary">Add Customer</a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        {% if customers %}
+        <div class="table-responsive">
+            <table class="table table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>Photo</th>
+                        <th>Customer ID</th>
+                        <th>Name</th>
+                        <th>Phone</th>
+                        <th>Email</th>
+                        <th>DOB</th>
+                        <th>Sex</th>
+                        <th>Nationality</th>
+                        <th>Occupation</th>
+                        <th>ID Number</th>
+                        <th>Status</th>
+                        <th>Joined</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for customer in customers %}
+                    <tr>
+                        <td>
+                            {% if customer.photo_path %}
+                                <img src="{{ url_for('static', filename=customer.photo_path) }}" alt="Customer photo" class="customer-photo">
+                            {% else %}
+                                <span class="text-muted">No photo</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ customer.customer_id }}</td>
+                        <td>{{ customer.full_name }}</td>
+                        <td>{{ customer.phone }}</td>
+                        <td>{{ customer.email or '-' }}</td>
+                        <td>{{ customer.date_of_birth or '-' }}</td>
+                        <td>{{ customer.sex or '-' }}</td>
+                        <td>{{ customer.nationality or '-' }}</td>
+                        <td>{{ customer.occupation or '-' }}</td>
+                        <td>{{ customer.id_number or '-' }}</td>
+                        <td>
+                            {% if customer.status == 'Active' %}
+                                <span class="badge bg-success">Active</span>
+                            {% else %}
+                                <span class="badge bg-danger">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ customer.created_at }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+            <p class="text-muted mb-0">No customers added yet.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<h2 class="mb-3">Internal Reports</h2>
+<div class="row g-4">
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h5>Account Statement PDF</h5>
+                <p class="text-muted">Generate a PDF statement from a selected start date up to today's date automatically.</p>
+                <a href="{{ url_for('account_statement_report') }}" class="btn btn-primary">Create Statement</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h5>Management Account Report PDF</h5>
+                <p class="text-muted">Generate accounts opened today or all savings accounts with name, account number, and balance.</p>
+                <a href="{{ url_for('management_report') }}" class="btn btn-primary">Create Management Report</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
