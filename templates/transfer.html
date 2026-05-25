@@ -7,7 +7,11 @@
         <div class="card shadow-sm">
             <div class="card-body">
                 <h5 class="mb-3">New Transfer</h5>
-                {% if accounts|length >= 2 %}
+                {% if not manager_logged_in %}
+                <div class="alert alert-info mb-0">
+                    Public users can view recent transfers only. Please login as manager to make a transfer.
+                </div>
+                {% elif accounts|length >= 2 %}
                 <form method="POST">
                     <div class="mb-3">
                         <label class="form-label">From Account</label>

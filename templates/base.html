@@ -10,7 +10,10 @@
 <body>
 <nav class="navbar navbar-expand-lg bank-navbar">
     <div class="container">
-        <a class="navbar-brand fw-bold" href="{{ url_for('home') }}">{{ bank_name }}</a>
+        <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="{{ url_for('home') }}">
+            <img src="{{ url_for('static', filename='images/easy_bank_logo.png') }}" alt="Easy Bank logo" class="navbar-logo">
+            <span>{{ bank_name }}</span>
+        </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -23,6 +26,11 @@
                 <li class="nav-item"><a class="nav-link" href="{{ url_for('transfer_page') }}">Transfer</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ url_for('reports_page') }}">Reports</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ url_for('contact_page') }}">Contact Us</a></li>
+                {% if manager_logged_in %}
+                    <li class="nav-item"><a class="nav-link manager-badge" href="{{ url_for('logout_page') }}">Manager Logout</a></li>
+                {% else %}
+                    <li class="nav-item"><a class="nav-link manager-badge" href="{{ url_for('login_page') }}">Manager Login</a></li>
+                {% endif %}
             </ul>
         </div>
     </div>
@@ -32,13 +40,23 @@
     <div class="container py-4">
         <div class="row align-items-center g-3">
             <div class="col-lg-8">
-                <p class="small-label mb-2">{{ tagline }}</p>
-                <h1 class="mb-1">{{ bank_name }}</h1>
-                <p class="mb-0">{{ branch_name }} | Community Savings Banking</p>
+                <div class="d-flex align-items-center gap-3">
+                    <img src="{{ url_for('static', filename='images/easy_bank_logo.png') }}" alt="Easy Bank logo" class="header-logo">
+                    <div>
+                        <p class="small-label mb-2">{{ tagline }}</p>
+                        <h1 class="mb-1">{{ bank_name }}</h1>
+                        <p class="mb-0">{{ branch_name }} | Community Savings Banking</p>
+                    </div>
+                </div>
             </div>
             <div class="col-lg-4 text-lg-end">
                 <p class="mb-1"><strong>Phone:</strong> {{ contact_phone_display }}</p>
-                <p class="mb-0"><strong>Manager:</strong> {{ branch_manager }}</p>
+                <p class="mb-1"><strong>Manager:</strong> {{ branch_manager }}</p>
+                {% if manager_logged_in %}
+                    <span class="badge text-bg-success">Manager Mode Active</span>
+                {% else %}
+                    <span class="badge text-bg-light">Public View Mode</span>
+                {% endif %}
             </div>
         </div>
     </div>

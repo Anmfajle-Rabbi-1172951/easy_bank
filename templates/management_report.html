@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
-<h2 class="mb-3">Management Account Report PDF</h2>
+<div class="report-page-heading mb-3">
+    <img src="{{ url_for('static', filename='images/easy_bank_logo.png') }}" alt="Easy Bank logo" class="report-logo">
+    <div>
+        <p class="small-label mb-1">{{ tagline }}</p>
+        <h2 class="mb-0">Management Account Report PDF</h2>
+    </div>
+</div>
 <div class="card shadow-sm">
     <div class="card-body">
         <form method="POST">

@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, send_file
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file, session
 from datetime import datetime, date
 from pathlib import Path
 from io import BytesIO
@@ -6,11 +6,18 @@ from werkzeug.utils import secure_filename
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
 import sqlite3
+import os
+from functools import wraps
 
 app = Flask(__name__)
-app.secret_key = "easy-bank-dev-secret"
+app.secret_key = os.environ.get("EASY_BANK_SECRET_KEY", "easy-bank-dev-secret-change-this")
+
+# Manager login credentials.
+# For better security on PythonAnywhere, you can set these as environment variables later.
+MANAGER_USERNAME = os.environ.get("EASY_BANK_MANAGER_USERNAME", "manager")
+MANAGER_PASSWORD = os.environ.get("EASY_BANK_MANAGER_PASSWORD", "EasyBank@2026!")
 
 BANK_NAME = "Easy Bank"
 BRANCH_NAME = "Lincoln Branch"
@@ -23,6 +30,7 @@ BRANCH_MANAGER = "A N M Fajle Rabbi"
 BASE_DIR = Path(__file__).resolve().parent
 DATABASE = BASE_DIR / "easy_bank.db"
 UPLOAD_FOLDER = BASE_DIR / "static" / "uploads" / "customers"
+LOGO_PATH = BASE_DIR / "static" / "images" / "easy_bank_logo.png"
 UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
 
@@ -159,12 +167,30 @@ def display_datetime():
 def today_iso():
     return date.today().isoformat()
 
+def is_manager_logged_in():
+    return session.get("manager_logged_in") is True
+
+
+def manager_login_required(view_function):
+    @wraps(view_function)
+    def wrapped_view(*args, **kwargs):
+        if not is_manager_logged_in():
+            flash("Manager login required for this action.", "warning")
+            return redirect(url_for("login_page", next=request.path))
+        return view_function(*args, **kwargs)
+    return wrapped_view
+
+
 
 def create_pdf_response(title, subtitle, table_data, filename):
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=35, bottomMargin=25)
     styles = getSampleStyleSheet()
     elements = []
+    if LOGO_PATH.exists():
+        logo = Image(str(LOGO_PATH), width=70, height=70)
+        elements.append(logo)
+        elements.append(Spacer(1, 6))
     elements.append(Paragraph(f"<b>{BANK_NAME}</b>", styles["Title"]))
     elements.append(Paragraph(f"{BRANCH_NAME} | {TAGLINE}", styles["Normal"]))
     elements.append(Spacer(1, 10))
@@ -206,8 +232,37 @@ def inject_bank_details():
         contact_phone_whatsapp=CONTACT_PHONE_WHATSAPP,
         branch_manager=BRANCH_MANAGER,
         today_date=today_iso(),
+        manager_logged_in=is_manager_logged_in(),
     )
 
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login_page():
+    if is_manager_logged_in():
+        return redirect(url_for("home"))
+
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+        next_page = request.form.get("next") or url_for("home")
+
+        if username == MANAGER_USERNAME and password == MANAGER_PASSWORD:
+            session["manager_logged_in"] = True
+            session["manager_username"] = username
+            flash("Manager login successful.", "success")
+            return redirect(next_page)
+
+        flash("Invalid manager username or password.", "danger")
+
+    return render_template("login.html", next=request.args.get("next", ""))
+
+
+@app.route("/logout")
+def logout_page():
+    session.clear()
+    flash("You have logged out successfully.", "success")
+    return redirect(url_for("home"))
 
 @app.route("/")
 def home():
@@ -229,6 +284,7 @@ def customers_page():
 
 
 @app.route("/customers/add", methods=["GET", "POST"])
+@manager_login_required
 def add_customer():
     if request.method == "POST":
         full_name = request.form.get("full_name", "").strip()
@@ -299,6 +355,7 @@ def accounts_page():
 
 
 @app.route("/accounts/open", methods=["GET", "POST"])
+@manager_login_required
 def open_account():
     if request.method == "POST":
         customer_id = request.form.get("customer_id", "").strip().upper()
@@ -329,6 +386,10 @@ def open_account():
 def transactions_page():
     conn = get_db_connection()
     if request.method == "POST":
+        if not is_manager_logged_in():
+            conn.close()
+            flash("Manager login required for deposit or withdraw.", "warning")
+            return redirect(url_for("login_page", next=url_for("transactions_page")))
         account_number = request.form.get("account_number", "").strip()
         transaction_type = request.form.get("transaction_type", "").strip()
         try:
@@ -364,6 +425,10 @@ def transactions_page():
 def transfer_page():
     conn = get_db_connection()
     if request.method == "POST":
+        if not is_manager_logged_in():
+            conn.close()
+            flash("Manager login required for account transfer.", "warning")
+            return redirect(url_for("login_page", next=url_for("transfer_page")))
         from_account = request.form.get("from_account", "").strip()
         to_account = request.form.get("to_account", "").strip()
         comment = request.form.get("comment", "").strip()

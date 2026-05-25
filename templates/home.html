@@ -11,9 +11,13 @@
     <div class="card-body">
         <h3>Welcome to Easy Bank</h3>
         <p>This is a simple personal banking management web app for one head office and Lincoln Branch.</p>
-        <a href="{{ url_for('add_customer') }}" class="btn btn-primary">Add Customer</a>
-        <a href="{{ url_for('open_account') }}" class="btn btn-outline-primary">Open Account</a>
-        <a href="{{ url_for('transfer_page') }}" class="btn btn-outline-primary">Transfer</a>
+        {% if manager_logged_in %}
+            <a href="{{ url_for('add_customer') }}" class="btn btn-primary">Add Customer</a>
+            <a href="{{ url_for('open_account') }}" class="btn btn-outline-primary">Open Account</a>
+            <a href="{{ url_for('transfer_page') }}" class="btn btn-outline-primary">Transfer</a>
+        {% else %}
+            <a href="{{ url_for('login_page') }}" class="btn btn-primary">Manager Login</a>
+        {% endif %}
         <a href="{{ url_for('reports_page') }}" class="btn btn-outline-primary">Reports</a>
     </div>
 </div>

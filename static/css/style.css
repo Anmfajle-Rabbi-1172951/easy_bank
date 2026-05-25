@@ -101,3 +101,65 @@ body {
     border-color: #7fb5aa;
     box-shadow: 0 0 0 .2rem rgba(95, 159, 145, .18);
 }
+
+.manager-badge {
+    border: 1px solid rgba(255,255,255,0.45);
+    border-radius: 999px;
+    padding-left: 0.9rem !important;
+    padding-right: 0.9rem !important;
+    margin-left: 0.25rem;
+}
+
+
+.navbar-logo {
+    width: 42px;
+    height: 42px;
+    object-fit: contain;
+    background: #ffffff;
+    border-radius: 50%;
+    padding: 3px;
+    border: 1px solid #c7ddd8;
+}
+
+.header-logo {
+    width: 112px;
+    height: 112px;
+    object-fit: contain;
+    background: rgba(255, 255, 255, 0.86);
+    border-radius: 22px;
+    padding: 8px;
+    border: 1px solid #c7ddd8;
+    box-shadow: 0 10px 24px rgba(31, 77, 69, 0.10);
+}
+
+.report-page-heading {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: #ffffff;
+    border: 1px solid #e0e9e7;
+    border-radius: 18px;
+    padding: 16px;
+    box-shadow: 0 8px 24px rgba(38, 64, 60, 0.06);
+}
+
+.report-logo {
+    width: 82px;
+    height: 82px;
+    object-fit: contain;
+    border-radius: 18px;
+    border: 1px solid #dceee9;
+    padding: 6px;
+    background: #fff;
+}
+
+@media (max-width: 576px) {
+    .header-logo {
+        width: 82px;
+        height: 82px;
+    }
+    .report-logo {
+        width: 64px;
+        height: 64px;
+    }
+}

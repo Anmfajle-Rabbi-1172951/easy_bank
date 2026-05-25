@@ -5,7 +5,11 @@
     <div class="col-lg-5">
         <div class="card shadow-sm"><div class="card-body">
             <h5>New Transaction</h5>
-            {% if accounts %}
+            {% if not manager_logged_in %}
+            <div class="alert alert-info mb-0">
+                Public users can view transaction history only. Please login as manager to deposit or withdraw.
+            </div>
+            {% elif accounts %}
             <form method="POST">
                 <div class="mb-3">
                     <label class="form-label">Account</label>
