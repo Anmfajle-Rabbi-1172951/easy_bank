@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+    <div>
+        <h2 class="mb-0">Transfer Funds</h2>
+        <p class="text-muted mb-0 small">Send money to another Easy Bank account</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Transfer Form -->
+    <div class="col-lg-5">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center gap-2 mb-4">
+                    <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center" style="width:44px;height:44px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="#5f9f91" viewBox="0 0 16 16">
+                            <path fill-rule="evenodd" d="M1 11.5a.5.5 0 0 0 .5.5h11.793l-3.147 3.146a.5.5 0 0 0 .708.708l4-4a.5.5 0 0 0 0-.708l-4-4a.5.5 0 0 0-.708.708L13.293 11H1.5a.5.5 0 0 0-.5.5zm14-7a.5.5 0 0 1-.5.5H2.707l3.147 3.146a.5.5 0 1 1-.708.708l-4-4a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 4H14.5a.5.5 0 0 1 .5.5z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h5 class="mb-0">New Transfer</h5>
+                        <small class="text-muted">From: <strong>{{ my_account.account_number }}</strong> &nbsp;|&nbsp; Balance: <strong>${{ '%.2f'|format(my_account.balance) }}</strong></small>
+                    </div>
+                </div>
+
+                <form method="POST" id="transferForm">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Recipient Account Number</label>
+                        <input type="text" name="to_account" class="form-control" placeholder="e.g. EB-SA0002" required autocomplete="off">
+                        <div class="form-text">Enter the full Easy Bank account number of the recipient.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Amount (NZD)</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" name="amount" class="form-control" min="0.01" step="0.01" placeholder="0.00" required>
+                        </div>
+                        <div class="form-text">Available balance: <strong>${{ '%.2f'|format(my_account.balance) }}</strong></div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Reference / Note <span class="text-muted fw-normal">(optional)</span></label>
+                        <input type="text" name="comment" class="form-control" placeholder="e.g. Rent payment, Invoice #123">
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="me-2" viewBox="0 0 16 16">
+                                <path d="M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.75.75 0 0 1-1.329.124l-3.178-4.995L.643 7.184a.75.75 0 0 1 .124-1.33L15.314.037a.5.5 0 0 1 .54.11Z"/>
+                            </svg>
+                            Send Transfer
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Info card -->
+        <div class="card mt-3" style="border-left: 4px solid #5f9f91;">
+            <div class="card-body py-3 px-4">
+                <h6 class="mb-2 text-success">Transfer Guidelines</h6>
+                <ul class="mb-0 small text-muted ps-3">
+                    <li>Transfers are processed instantly.</li>
+                    <li>You cannot transfer to your own account.</li>
+                    <li>Ensure the recipient account number is correct before confirming.</li>
+                    <li>Contact the branch manager if you need assistance.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Transfers -->
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <h5 class="mb-3">Transfer History</h5>
+                {% if recent_transfers %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                                <th>Counterpart Account</th>
+                                <th>Balance After</th>
+                                <th>Reference</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for t in recent_transfers %}
+                            <tr>
+                                <td><small>{{ t.created_at }}</small></td>
+                                <td>
+                                    {% if t.transaction_type == 'Transfer Out' %}
+                                        <span class="badge bg-danger bg-opacity-10 text-danger">Sent</span>
+                                    {% else %}
+                                        <span class="badge bg-success bg-opacity-10 text-success">Received</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if t.transaction_type == 'Transfer Out' %}
+                                        <span class="text-danger fw-semibold">-${{ '%.2f'|format(t.amount) }}</span>
+                                    {% else %}
+                                        <span class="text-success fw-semibold">+${{ '%.2f'|format(t.amount) }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if t.transaction_type == 'Transfer Out' %}
+                                        <small class="text-muted">To: {{ t.to_account_number }}</small>
+                                    {% else %}
+                                        <small class="text-muted">From: {{ t.from_account_number }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if t.balance_after is not none %}
+                                        ${{ '%.2f'|format(t.balance_after) }}
+                                    {% else %}-{% endif %}
+                                </td>
+                                <td><small class="text-muted">{{ t.comment or '—' }}</small></td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5 text-muted">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="mb-3 opacity-25" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M1 11.5a.5.5 0 0 0 .5.5h11.793l-3.147 3.146a.5.5 0 0 0 .708.708l4-4a.5.5 0 0 0 0-.708l-4-4a.5.5 0 0 0-.708.708L13.293 11H1.5a.5.5 0 0 0-.5.5zm14-7a.5.5 0 0 1-.5.5H2.707l3.147 3.146a.5.5 0 1 1-.708.708l-4-4a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 4H14.5a.5.5 0 0 1 .5.5z"/>
+                    </svg>
+                    <p class="mb-0">No transfers yet. Make your first transfer above.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

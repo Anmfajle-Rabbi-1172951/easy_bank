@@ -638,6 +638,80 @@ def transfer_page():
     return render_template("transfer.html", accounts=accounts, recent_transfers=recent_transfers)
 
 
+@app.route("/my-transfer", methods=["GET", "POST"])
+@customer_login_required
+def customer_transfer_page():
+    conn = get_db_connection()
+    customer_id = get_logged_customer_id()
+    customer = conn.execute("SELECT * FROM customers WHERE customer_id=?", (customer_id,)).fetchone()
+    my_account = conn.execute("SELECT * FROM accounts WHERE customer_id=?", (customer_id,)).fetchone()
+
+    if not my_account:
+        conn.close()
+        flash("You do not have a savings account yet. Please contact the branch manager.", "warning")
+        return redirect(url_for("customer_dashboard"))
+
+    if customer["status"] != "Active":
+        conn.close()
+        flash("Your account is currently inactive. Please contact the branch manager to activate your account.", "warning")
+        return redirect(url_for("customer_dashboard"))
+
+    if request.method == "POST":
+        to_account_number = request.form.get("to_account", "").strip()
+        comment = request.form.get("comment", "").strip()
+        try:
+            amount = float(request.form.get("amount") or 0)
+        except ValueError:
+            amount = 0
+
+        from_account_number = my_account["account_number"]
+
+        if not to_account_number or from_account_number == to_account_number or amount <= 0:
+            conn.close()
+            flash("Please enter a valid recipient account number and a positive amount.", "danger")
+            return redirect(url_for("customer_transfer_page"))
+
+        receiver = conn.execute("SELECT * FROM accounts WHERE account_number=?", (to_account_number,)).fetchone()
+        if receiver is None:
+            conn.close()
+            flash("Recipient account number not found. Please check and try again.", "danger")
+            return redirect(url_for("customer_transfer_page"))
+
+        sender = conn.execute("SELECT * FROM accounts WHERE account_number=?", (from_account_number,)).fetchone()
+        if sender["balance"] < amount:
+            conn.close()
+            flash("Insufficient funds in your account.", "danger")
+            return redirect(url_for("customer_transfer_page"))
+
+        sender_new_balance = sender["balance"] - amount
+        receiver_new_balance = receiver["balance"] + amount
+        conn.execute("UPDATE accounts SET balance=? WHERE account_number=?", (sender_new_balance, from_account_number))
+        conn.execute("UPDATE accounts SET balance=? WHERE account_number=?", (receiver_new_balance, to_account_number))
+        txn_id = next_transaction_id(conn)
+        now_text = display_datetime()
+        today_text = today_iso()
+        conn.execute("""
+            INSERT INTO transactions (transaction_id, account_number, transaction_type, amount, created_at, transaction_date, from_account_number, to_account_number, comment, balance_after)
+            VALUES (?, ?, 'Transfer Out', ?, ?, ?, ?, ?, ?, ?)
+        """, (txn_id, from_account_number, amount, now_text, today_text, from_account_number, to_account_number, comment, sender_new_balance))
+        conn.execute("""
+            INSERT INTO transactions (transaction_id, account_number, transaction_type, amount, created_at, transaction_date, from_account_number, to_account_number, comment, balance_after)
+            VALUES (?, ?, 'Transfer In', ?, ?, ?, ?, ?, ?, ?)
+        """, (txn_id + 1, to_account_number, amount, now_text, today_text, from_account_number, to_account_number, comment, receiver_new_balance))
+        conn.commit()
+        conn.close()
+        flash(f"Transfer of ${amount:.2f} to account {to_account_number} completed successfully.", "success")
+        return redirect(url_for("customer_transfer_page"))
+
+    recent_transfers = conn.execute("""
+        SELECT * FROM transactions
+        WHERE account_number=? AND transaction_type IN ('Transfer Out', 'Transfer In')
+        ORDER BY id DESC LIMIT 20
+    """, (my_account["account_number"],)).fetchall()
+    conn.close()
+    return render_template("customer_transfer.html", my_account=my_account, recent_transfers=recent_transfers)
+
+
 @app.route("/reports")
 def reports_page():
     return render_template("reports.html")

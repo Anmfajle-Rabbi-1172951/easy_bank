@@ -1,165 +1,347 @@
-body {
-    background: #f5f8f8;
-    color: #223131;
+/* ============================================================
+   Easy Bank – Professional UI Stylesheet
+   ============================================================ */
+
+:root {
+    --eb-primary:     #2e7d6e;
+    --eb-primary-dk:  #1f5c50;
+    --eb-primary-lt:  #5f9f91;
+    --eb-surface:     #f4f8f7;
+    --eb-card-border: #dde8e5;
+    --eb-text:        #1c3531;
+    --eb-muted:       #5c7571;
+    --eb-navbar-bg:   #1f5c50;
+    --eb-header-bg:   linear-gradient(135deg, #1f5c50 0%, #2e7d6e 60%, #3a9485 100%);
+    --eb-footer-bg:   #152e29;
+    --eb-danger:      #c0392b;
+    --eb-success:     #1e8449;
 }
 
+/* ---------- Body ---------- */
+body {
+    background: var(--eb-surface);
+    color: var(--eb-text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-size: 0.95rem;
+}
+
+/* ---------- Navbar ---------- */
 .bank-navbar {
-    background: #dceee9;
-    border-bottom: 1px solid #c7ddd8;
+    background: var(--eb-navbar-bg);
+    border-bottom: none;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.18);
 }
 
 .bank-navbar .navbar-brand {
-    color: #1f4d45;
+    color: #ffffff;
+    font-weight: 700;
+    letter-spacing: 0.01em;
 }
 
 .bank-navbar .nav-link {
-    color: #2e5d56;
+    color: rgba(255,255,255,0.82);
     font-weight: 500;
+    padding: 0.5rem 0.85rem;
+    border-radius: 6px;
+    transition: background 0.2s, color 0.2s;
 }
 
-.bank-navbar .nav-link:hover {
-    color: #0f2f2a;
+.bank-navbar .nav-link:hover,
+.bank-navbar .nav-link:focus {
+    color: #ffffff;
+    background: rgba(255,255,255,0.12);
 }
 
 .navbar-toggler {
-    border-color: #8fb9b0;
+    border-color: rgba(255,255,255,0.35);
+}
+.navbar-toggler-icon {
+    filter: invert(1);
 }
 
+/* ---------- Header ---------- */
 .bank-header {
-    background: linear-gradient(135deg, #dceee9, #eaf5fb, #eef1f0);
-    border-bottom: 4px solid #b8d7d1;
-    color: #1e403b;
+    background: var(--eb-header-bg);
+    color: #ffffff;
+    border-bottom: none;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+
+.bank-header h1 {
+    font-size: 1.9rem;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: -0.01em;
+}
+
+.bank-header p {
+    color: rgba(255,255,255,0.82);
 }
 
 .small-label {
     display: inline-block;
-    background: rgba(255, 255, 255, 0.7);
-    border: 1px solid #c7ddd8;
+    background: rgba(255,255,255,0.18);
+    border: 1px solid rgba(255,255,255,0.28);
     border-radius: 999px;
-    padding: 6px 12px;
-    color: #355d58;
+    padding: 4px 14px;
+    color: rgba(255,255,255,0.92);
     font-weight: 600;
+    font-size: 0.8rem;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
 }
 
+/* ---------- Cards ---------- */
 .card {
-    border: 1px solid #e0e9e7;
-    border-radius: 16px;
-    box-shadow: 0 8px 24px rgba(38, 64, 60, 0.06);
+    border: 1px solid var(--eb-card-border);
+    border-radius: 14px;
+    box-shadow: 0 4px 18px rgba(30,60,55,0.07);
+    background: #ffffff;
+    transition: box-shadow 0.2s;
 }
 
-.btn-primary, .btn-success {
-    background: #5f9f91;
-    border-color: #5f9f91;
+.card:hover {
+    box-shadow: 0 8px 28px rgba(30,60,55,0.11);
 }
 
-.btn-primary:hover, .btn-success:hover {
-    background: #4b887b;
-    border-color: #4b887b;
+/* ---------- Buttons ---------- */
+.btn-primary {
+    background: var(--eb-primary);
+    border-color: var(--eb-primary);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    border-radius: 8px;
+}
+.btn-primary:hover,
+.btn-primary:focus {
+    background: var(--eb-primary-dk);
+    border-color: var(--eb-primary-dk);
+}
+
+.btn-success {
+    background: var(--eb-success);
+    border-color: var(--eb-success);
+    font-weight: 600;
+    border-radius: 8px;
 }
 
 .btn-outline-primary {
-    color: #4b887b;
-    border-color: #7fb5aa;
+    color: var(--eb-primary);
+    border-color: var(--eb-primary-lt);
+    font-weight: 600;
+    border-radius: 8px;
 }
-
 .btn-outline-primary:hover {
-    background: #5f9f91;
-    border-color: #5f9f91;
+    background: var(--eb-primary);
+    border-color: var(--eb-primary);
+    color: #fff;
 }
 
-.stat-card {
-    padding: 20px;
+.btn-outline-danger {
+    border-radius: 8px;
+    font-weight: 600;
 }
 
-.stat-card h6 {
-    color: #6c7f7b;
-}
+.btn-lg { padding: 0.65rem 1.4rem; }
 
-.stat-card h2 {
-    color: #1f4d45;
+/* ---------- Forms ---------- */
+.form-control,
+.form-select {
+    border-color: #ccdcd9;
+    border-radius: 8px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--eb-primary-lt);
+    box-shadow: 0 0 0 0.2rem rgba(46, 125, 110, 0.18);
+}
+.input-group-text {
+    background: #f0f6f5;
+    border-color: #ccdcd9;
+    color: var(--eb-primary);
     font-weight: 700;
 }
 
+/* ---------- Tables ---------- */
+.table {
+    font-size: 0.87rem;
+}
+.table thead th {
+    font-weight: 600;
+    color: var(--eb-muted);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    border-bottom-width: 1px;
+}
+.table-hover tbody tr:hover {
+    background: #f0f8f6;
+}
+
+/* ---------- Badges ---------- */
+.badge {
+    font-weight: 600;
+    font-size: 0.75rem;
+    padding: 0.38em 0.75em;
+    border-radius: 6px;
+}
+
+/* ---------- Stat Cards ---------- */
+.stat-card {
+    padding: 22px 24px;
+    border-radius: 14px;
+}
+.stat-card h6 {
+    color: var(--eb-muted);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+.stat-card h2 {
+    color: var(--eb-text);
+    font-weight: 800;
+    font-size: 2rem;
+    letter-spacing: -0.03em;
+}
+.stat-card .stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ---------- Customer Photo ---------- */
 .customer-photo {
     width: 48px;
     height: 48px;
     object-fit: cover;
     border-radius: 50%;
-    border: 1px solid #cbdad7;
+    border: 2px solid #dde8e5;
 }
 
+/* ---------- Footer ---------- */
 .bank-footer {
-    background: #2d3636;
-    color: #dceee9;
+    background: var(--eb-footer-bg);
+    color: rgba(255,255,255,0.72);
+}
+.bank-footer h6 {
+    color: #ffffff;
+    font-weight: 600;
+}
+.bank-footer small {
+    color: rgba(255,255,255,0.55);
 }
 
-.form-control, .form-select {
-    border-color: #ccdcd9;
+/* ---------- Auth Badge in Header ---------- */
+.badge.text-bg-success {
+    background: rgba(30,132,73,0.18) !important;
+    color: #1e8449 !important;
+    border: 1px solid rgba(30,132,73,0.28);
+}
+.badge.text-bg-primary {
+    background: rgba(46,125,110,0.15) !important;
+    color: var(--eb-primary-dk) !important;
+    border: 1px solid rgba(46,125,110,0.25);
+}
+.badge.text-bg-light {
+    background: rgba(255,255,255,0.15) !important;
+    color: rgba(255,255,255,0.85) !important;
+    border: 1px solid rgba(255,255,255,0.2);
 }
 
-.form-control:focus, .form-select:focus {
-    border-color: #7fb5aa;
-    box-shadow: 0 0 0 .2rem rgba(95, 159, 145, .18);
-}
-
+/* ---------- Manager / Logout Badge in Navbar ---------- */
 .manager-badge {
-    border: 1px solid rgba(255,255,255,0.45);
-    border-radius: 999px;
-    padding-left: 0.9rem !important;
-    padding-right: 0.9rem !important;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3) !important;
+    border-radius: 999px !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+    color: #ffffff !important;
     margin-left: 0.25rem;
 }
+.manager-badge:hover {
+    background: rgba(255,255,255,0.25) !important;
+}
 
-
+/* ---------- Logos ---------- */
 .navbar-logo {
-    width: 42px;
-    height: 42px;
+    width: 38px;
+    height: 38px;
     object-fit: contain;
-    background: #ffffff;
+    background: rgba(255,255,255,0.92);
     border-radius: 50%;
     padding: 3px;
-    border: 1px solid #c7ddd8;
+    border: 1px solid rgba(255,255,255,0.4);
 }
 
 .header-logo {
-    width: 112px;
-    height: 112px;
+    width: 108px;
+    height: 108px;
     object-fit: contain;
-    background: rgba(255, 255, 255, 0.86);
-    border-radius: 22px;
+    background: rgba(255,255,255,0.92);
+    border-radius: 20px;
     padding: 8px;
-    border: 1px solid #c7ddd8;
-    box-shadow: 0 10px 24px rgba(31, 77, 69, 0.10);
+    border: 1px solid rgba(255,255,255,0.3);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
 }
 
+/* ---------- Report Page ---------- */
 .report-page-heading {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 18px;
     background: #ffffff;
-    border: 1px solid #e0e9e7;
-    border-radius: 18px;
-    padding: 16px;
-    box-shadow: 0 8px 24px rgba(38, 64, 60, 0.06);
+    border: 1px solid var(--eb-card-border);
+    border-radius: 14px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 18px rgba(30,60,55,0.07);
 }
-
 .report-logo {
-    width: 82px;
-    height: 82px;
+    width: 78px;
+    height: 78px;
     object-fit: contain;
-    border-radius: 18px;
-    border: 1px solid #dceee9;
+    border-radius: 14px;
+    border: 1px solid #dde8e5;
     padding: 6px;
     background: #fff;
 }
 
+/* ---------- Alerts ---------- */
+.alert {
+    border-radius: 10px;
+    font-weight: 500;
+}
+.alert-danger { border-left: 4px solid var(--eb-danger); }
+.alert-success { border-left: 4px solid var(--eb-success); }
+.alert-warning { border-left: 4px solid #d68910; }
+.alert-info    { border-left: 4px solid #2980b9; }
+
+/* ---------- Page Headings ---------- */
+h2 {
+    font-weight: 700;
+    color: var(--eb-text);
+    letter-spacing: -0.01em;
+}
+h5.card-title, .card h5 {
+    color: var(--eb-primary-dk);
+    font-weight: 700;
+}
+
+/* ---------- Transfer type badges ---------- */
+.text-danger { color: #c0392b !important; }
+.text-success { color: var(--eb-success) !important; }
+.bg-danger.bg-opacity-10 { background-color: rgba(192,57,43,0.1) !important; }
+.bg-success.bg-opacity-10 { background-color: rgba(30,132,73,0.1) !important; }
+
+/* ---------- Responsive ---------- */
 @media (max-width: 576px) {
-    .header-logo {
-        width: 82px;
-        height: 82px;
-    }
-    .report-logo {
-        width: 64px;
-        height: 64px;
-    }
+    .header-logo { width: 78px; height: 78px; }
+    .report-logo { width: 60px; height: 60px; }
+    .bank-header h1 { font-size: 1.45rem; }
+    .stat-card h2 { font-size: 1.55rem; }
 }

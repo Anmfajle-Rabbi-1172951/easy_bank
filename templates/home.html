@@ -1,30 +1,94 @@
 {% extends "base.html" %}
 {% block content %}
+
+<!-- Stat Cards -->
 <div class="row g-3 mb-4">
-    <div class="col-md-3"><div class="card stat-card"><h6>{% if manager_logged_in %}Total Customers{% else %}My Profile{% endif %}</h6><h2>{{ total_customers }}</h2></div></div>
-    <div class="col-md-3"><div class="card stat-card"><h6>{% if manager_logged_in %}Total Accounts{% else %}My Accounts{% endif %}</h6><h2>{{ total_accounts }}</h2></div></div>
-    <div class="col-md-3"><div class="card stat-card"><h6>{% if manager_logged_in %}Transactions{% else %}My Transactions{% endif %}</h6><h2>{{ total_transactions }}</h2></div></div>
-    <div class="col-md-3"><div class="card stat-card"><h6>{% if manager_logged_in %}Total Balance{% else %}My Balance{% endif %}</h6><h2>${{ '%.2f'|format(total_balance) }}</h2></div></div>
+    <div class="col-6 col-md-3">
+        <div class="card stat-card h-100">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h6>{% if manager_logged_in %}Total Customers{% elif customer_logged_in %}My Profile{% else %}Customers{% endif %}</h6>
+                    <h2>{{ total_customers }}</h2>
+                </div>
+                <div class="stat-icon" style="background:#e8f5f2;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="#2e7d6e" viewBox="0 0 16 16">
+                        <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.029 10 8 10c-2.03 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card stat-card h-100">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h6>{% if manager_logged_in %}Total Accounts{% elif customer_logged_in %}My Account{% else %}Accounts{% endif %}</h6>
+                    <h2>{{ total_accounts }}</h2>
+                </div>
+                <div class="stat-icon" style="background:#e8f5f2;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="#2e7d6e" viewBox="0 0 16 16">
+                        <path d="M0 3a2 2 0 0 1 2-2h13.5a.5.5 0 0 1 0 1H15v2a1 1 0 0 1 1 1v8.5a1.5 1.5 0 0 1-1.5 1.5h-12A2.5 2.5 0 0 1 0 12.5V3zm1 1.732V12.5A1.5 1.5 0 0 0 2.5 14h12a.5.5 0 0 0 .5-.5V5H2a1.99 1.99 0 0 1-1-.268zM1 3a1 1 0 0 0 1 1h12V2H2a1 1 0 0 0-1 1z"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card stat-card h-100">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h6>{% if customer_logged_in %}My Transactions{% else %}Transactions{% endif %}</h6>
+                    <h2>{{ total_transactions }}</h2>
+                </div>
+                <div class="stat-icon" style="background:#e8f5f2;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="#2e7d6e" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M1 11.5a.5.5 0 0 0 .5.5h11.793l-3.147 3.146a.5.5 0 0 0 .708.708l4-4a.5.5 0 0 0 0-.708l-4-4a.5.5 0 0 0-.708.708L13.293 11H1.5a.5.5 0 0 0-.5.5zm14-7a.5.5 0 0 1-.5.5H2.707l3.147 3.146a.5.5 0 1 1-.708.708l-4-4a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 4H14.5a.5.5 0 0 1 .5.5z"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card stat-card h-100">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h6>{% if manager_logged_in %}Total Deposits{% elif customer_logged_in %}My Balance{% else %}Total Balance{% endif %}</h6>
+                    <h2 style="font-size:1.45rem;">${{ '%.2f'|format(total_balance) }}</h2>
+                </div>
+                <div class="stat-icon" style="background:#e8f5f2;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="#2e7d6e" viewBox="0 0 16 16">
+                        <path d="M1 3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1H1zm7 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/>
+                        <path d="M0 5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H1a1 1 0 0 1-1-1V5zm3 0a2 2 0 0 1-2 2v4a2 2 0 0 1 2 2h10a2 2 0 0 1 2-2V7a2 2 0 0 1-2-2H3z"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
+<!-- Welcome Card -->
 <div class="card shadow-sm">
-    <div class="card-body">
-        <h3>Welcome to Easy Bank</h3>
-        <p>NZ only Lincoln based community bank. Customers can register online, then the manager will verify and activate the profile.</p>
+    <div class="card-body p-4">
+        <h3 class="mb-2">Welcome to Easy Bank</h3>
+        <p class="text-muted mb-4">NZ's Lincoln-based community savings bank. Register online, and our manager will verify and activate your profile.</p>
+        <div class="d-flex flex-wrap gap-2">
         {% if manager_logged_in %}
             <a href="{{ url_for('customers_page') }}" class="btn btn-primary">Review Customers</a>
             <a href="{{ url_for('open_account') }}" class="btn btn-outline-primary">Open Account</a>
+            <a href="{{ url_for('transactions_page') }}" class="btn btn-outline-primary">Transactions</a>
             <a href="{{ url_for('transfer_page') }}" class="btn btn-outline-primary">Transfer</a>
-            <a href="{{ url_for('manager_settings_page') }}" class="btn btn-outline-secondary">Manager Settings</a>
+            <a href="{{ url_for('manager_settings_page') }}" class="btn btn-outline-secondary">Settings</a>
         {% elif customer_logged_in %}
             <a href="{{ url_for('customer_dashboard') }}" class="btn btn-primary">My Dashboard</a>
-            <a href="{{ url_for('account_statement_report') }}" class="btn btn-outline-primary">Download My Statement</a>
+            <a href="{{ url_for('customer_transfer_page') }}" class="btn btn-outline-primary">Transfer Funds</a>
+            <a href="{{ url_for('account_statement_report') }}" class="btn btn-outline-primary">Download Statement</a>
         {% else %}
             <a href="{{ url_for('add_customer') }}" class="btn btn-primary">Register as Customer</a>
             <a href="{{ url_for('customer_login_page') }}" class="btn btn-outline-primary">Customer Login</a>
             <a href="{{ url_for('login_page') }}" class="btn btn-outline-secondary">Manager Login</a>
         {% endif %}
-        <a href="{{ url_for('contact_page') }}" class="btn btn-outline-primary">Contact Us</a>
+            <a href="{{ url_for('contact_page') }}" class="btn btn-outline-primary">Contact Us</a>
+        </div>
     </div>
 </div>
 {% endblock %}
