@@ -71,9 +71,24 @@
     <div class="card-body p-4">
         <h3 class="mb-2">Welcome to Easy Bank</h3>
         <p class="text-muted mb-4">NZ's Lincoln-based community savings bank. Register online, and our manager will verify and activate your profile.</p>
+        {% if manager_logged_in and pending_ro_txn_count > 0 %}
+        <div class="alert alert-warning d-flex align-items-center gap-3 mb-4" role="alert">
+            <span style="font-size:1.5rem">⏳</span>
+            <div>
+                <strong>{{ pending_ro_txn_count }} RO request{{ 's' if pending_ro_txn_count != 1 }} awaiting your authorisation</strong>
+                — transactions and account opens submitted by RO staff are pending your approval.
+            </div>
+            <a href="{{ url_for('manager_ro_transactions') }}" class="btn btn-warning btn-sm ms-auto text-nowrap">Authorise Now</a>
+        </div>
+        {% endif %}
+
         <div class="d-flex flex-wrap gap-2">
         {% if manager_logged_in %}
             <a href="{{ url_for('customers_page') }}" class="btn btn-primary">Review Customers</a>
+            <a href="{{ url_for('manager_ro_transactions') }}" class="btn btn-warning">
+                Authorise RO Requests
+                {% if pending_ro_txn_count > 0 %}<span class="badge bg-dark ms-1">{{ pending_ro_txn_count }}</span>{% endif %}
+            </a>
             <a href="{{ url_for('open_account') }}" class="btn btn-outline-primary">Open Account</a>
             <a href="{{ url_for('transactions_page') }}" class="btn btn-outline-primary">Transactions</a>
             <a href="{{ url_for('transfer_page') }}" class="btn btn-outline-primary">Transfer</a>
