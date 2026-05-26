@@ -201,13 +201,14 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 window.addEventListener("load", function () {
-    if (!localStorage.getItem("easyBankEidPopupClosed")) {
-        var eidPopupElement = document.getElementById("eidPopup");
+    var eidPopupElement = document.getElementById("eidPopup");
+
+    if (eidPopupElement) {
         var eidPopup = new bootstrap.Modal(eidPopupElement);
-        eidPopup.show();
-        eidPopupElement.addEventListener("hidden.bs.modal", function () {
-            localStorage.setItem("easyBankEidPopupClosed", "true");
-        });
+
+        setTimeout(function () {
+            eidPopup.show();
+        }, 500);
     }
 });
 </script>
