@@ -121,6 +121,12 @@ def init_db():
     add_column_if_missing(conn, "customers", "username", "username TEXT")
     add_column_if_missing(conn, "customers", "password_hash", "password_hash TEXT")
     add_column_if_missing(conn, "enquiries", "is_read", "is_read INTEGER NOT NULL DEFAULT 0")
+    # New columns for extended RO transaction types
+    add_column_if_missing(conn, "ro_transactions", "comment", "comment TEXT")
+    add_column_if_missing(conn, "ro_transactions", "to_account_number", "to_account_number TEXT")
+    add_column_if_missing(conn, "ro_transactions", "customer_id", "customer_id TEXT")
+    add_column_if_missing(conn, "ro_transactions", "customer_name", "customer_name TEXT")
+    add_column_if_missing(conn, "ro_transactions", "reject_reason", "reject_reason TEXT")
 
     manager = conn.execute("SELECT * FROM manager_settings WHERE id=1").fetchone()
     if manager is None:
@@ -1105,26 +1111,82 @@ def ro_transaction():
     conn = get_db_connection()
     ro = conn.execute("SELECT * FROM ro_staff WHERE ro_id=?", (ro_id,)).fetchone()
     accounts = conn.execute("SELECT * FROM accounts ORDER BY account_number").fetchall()
+    customers_no_account = conn.execute(
+        "SELECT * FROM customers WHERE status='Active' AND customer_id NOT IN (SELECT customer_id FROM accounts) ORDER BY full_name"
+    ).fetchall()
     if request.method == "POST":
-        account_number = request.form.get("account_number", "").strip()
         txn_type = request.form.get("transaction_type", "").strip()
-        try:
-            amount = float(request.form.get("amount") or 0)
-        except ValueError:
-            amount = 0
-        if not account_number or amount <= 0:
-            flash("Please select an account and enter a valid amount.", "danger")
+        comment = request.form.get("comment", "").strip()
+        txn_id = "RO-TXN-" + str(int(display_datetime().replace(" ", "").replace(":", "").replace("-", "")))
+
+        if txn_type in ("Deposit", "Withdraw"):
+            account_number = request.form.get("account_number", "").strip()
+            try:
+                amount = float(request.form.get("amount") or 0)
+            except ValueError:
+                amount = 0
+            if not account_number or amount <= 0:
+                flash("Please select an account and enter a valid amount.", "danger")
+            else:
+                conn.execute("""
+                    INSERT INTO ro_transactions (txn_id, ro_id, ro_name, account_number, transaction_type, amount, comment, status, submitted_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 'Pending Approval', ?)
+                """, (txn_id, ro_id, ro["full_name"], account_number, txn_type, amount, comment, display_datetime()))
+                conn.commit()
+                flash("Transaction submitted for manager approval.", "success")
+                conn.close()
+                return redirect(url_for("ro_dashboard"))
+
+        elif txn_type == "Transfer":
+            from_account = request.form.get("from_account_number", "").strip()
+            to_account = request.form.get("to_account_number", "").strip()
+            try:
+                amount = float(request.form.get("amount") or 0)
+            except ValueError:
+                amount = 0
+            if not from_account or not to_account or amount <= 0:
+                flash("Please select both accounts and enter a valid amount.", "danger")
+            elif from_account == to_account:
+                flash("From and To accounts must be different.", "danger")
+            else:
+                acc_from = conn.execute("SELECT * FROM accounts WHERE account_number=?", (from_account,)).fetchone()
+                acc_to = conn.execute("SELECT * FROM accounts WHERE account_number=?", (to_account,)).fetchone()
+                if not acc_from or not acc_to:
+                    flash("One or both accounts not found.", "danger")
+                else:
+                    conn.execute("""
+                        INSERT INTO ro_transactions (txn_id, ro_id, ro_name, account_number, to_account_number, transaction_type, amount, comment, status, submitted_at)
+                        VALUES (?, ?, ?, ?, ?, 'Transfer', ?, ?, 'Pending Approval', ?)
+                    """, (txn_id, ro_id, ro["full_name"], from_account, to_account, amount, comment, display_datetime()))
+                    conn.commit()
+                    flash("Transfer request submitted for manager approval.", "success")
+                    conn.close()
+                    return redirect(url_for("ro_dashboard"))
+
+        elif txn_type == "Open Account":
+            customer_id = request.form.get("customer_id", "").strip().upper()
+            customer = conn.execute("SELECT * FROM customers WHERE upper(customer_id)=? AND status='Active'", (customer_id,)).fetchone()
+            if not customer:
+                flash("Customer not found or not Active.", "danger")
+            else:
+                existing = conn.execute("SELECT * FROM accounts WHERE customer_id=?", (customer["customer_id"],)).fetchone()
+                if existing:
+                    flash(f"This customer already has account {existing['account_number']}.", "warning")
+                else:
+                    conn.execute("""
+                        INSERT INTO ro_transactions (txn_id, ro_id, ro_name, account_number, transaction_type, amount, customer_id, customer_name, comment, status, submitted_at)
+                        VALUES (?, ?, ?, '', 'Open Account', 0, ?, ?, ?, 'Pending Approval', ?)
+                    """, (txn_id, ro_id, ro["full_name"], customer["customer_id"], customer["full_name"], comment, display_datetime()))
+                    conn.commit()
+                    flash(f"Account open request for {customer['full_name']} submitted for manager approval.", "success")
+                    conn.close()
+                    return redirect(url_for("ro_dashboard"))
+
         else:
-            txn_id = "RO-TXN-" + str(int(display_datetime().replace(" ", "").replace(":", "").replace("-", "")))
-            conn.execute("""
-                INSERT INTO ro_transactions (txn_id, ro_id, ro_name, account_number, transaction_type, amount, status, submitted_at)
-                VALUES (?, ?, ?, ?, ?, ?, 'Pending Approval', ?)
-            """, (txn_id, ro_id, ro["full_name"], account_number, txn_type, amount, display_datetime()))
-            conn.commit()
-            flash("Transaction submitted for manager approval.", "success")
-            return redirect(url_for("ro_transaction"))
+            flash("Unknown transaction type.", "danger")
+
     conn.close()
-    return render_template("ro_transaction.html", ro=ro, accounts=accounts)
+    return render_template("ro_transaction.html", ro=ro, accounts=accounts, customers_no_account=customers_no_account)
 
 
 # ---- RO Messages ----
@@ -1198,34 +1260,88 @@ def manager_ro_transactions():
     if request.method == "POST":
         txn_id = request.form.get("txn_id")
         action = request.form.get("action")
+        reject_reason = request.form.get("reject_reason", "").strip()
         txn = conn.execute("SELECT * FROM ro_transactions WHERE txn_id=?", (txn_id,)).fetchone()
+
         if txn and action == "approve":
-            account = conn.execute("SELECT * FROM accounts WHERE account_number=?", (txn["account_number"],)).fetchone()
-            if account:
-                if txn["transaction_type"] == "Deposit":
-                    new_balance = account["balance"] + txn["amount"]
-                elif txn["transaction_type"] == "Withdraw":
-                    if account["balance"] < txn["amount"]:
-                        flash("Insufficient balance for this withdrawal.", "danger")
+            txn_type = txn["transaction_type"]
+
+            if txn_type in ("Deposit", "Withdraw"):
+                account = conn.execute("SELECT * FROM accounts WHERE account_number=?", (txn["account_number"],)).fetchone()
+                if account:
+                    if txn_type == "Deposit":
+                        new_balance = account["balance"] + txn["amount"]
+                    else:
+                        if account["balance"] < txn["amount"]:
+                            flash("Insufficient balance for this withdrawal.", "danger")
+                            conn.close()
+                            return redirect(url_for("manager_ro_transactions"))
+                        new_balance = account["balance"] - txn["amount"]
+                    conn.execute("UPDATE accounts SET balance=? WHERE account_number=?", (new_balance, txn["account_number"]))
+                    conn.execute("""
+                        INSERT INTO transactions (transaction_id, account_number, transaction_type, amount, created_at, transaction_date, comment, balance_after)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (next_transaction_id(conn), txn["account_number"], txn_type, txn["amount"], display_datetime(), today_iso(), txn["comment"] or "", new_balance))
+                    conn.execute("UPDATE ro_transactions SET status='Approved', decided_at=? WHERE txn_id=?", (display_datetime(), txn_id))
+                    conn.commit()
+                    flash("Transaction approved and processed.", "success")
+                else:
+                    flash("Account not found.", "danger")
+
+            elif txn_type == "Transfer":
+                acc_from = conn.execute("SELECT * FROM accounts WHERE account_number=?", (txn["account_number"],)).fetchone()
+                acc_to = conn.execute("SELECT * FROM accounts WHERE account_number=?", (txn["to_account_number"],)).fetchone()
+                if acc_from and acc_to:
+                    if acc_from["balance"] < txn["amount"]:
+                        flash("Insufficient balance in source account.", "danger")
                         conn.close()
                         return redirect(url_for("manager_ro_transactions"))
-                    new_balance = account["balance"] - txn["amount"]
+                    new_bal_from = acc_from["balance"] - txn["amount"]
+                    new_bal_to = acc_to["balance"] + txn["amount"]
+                    conn.execute("UPDATE accounts SET balance=? WHERE account_number=?", (new_bal_from, txn["account_number"]))
+                    conn.execute("UPDATE accounts SET balance=? WHERE account_number=?", (new_bal_to, txn["to_account_number"]))
+                    conn.execute("""
+                        INSERT INTO transactions (transaction_id, account_number, transaction_type, amount, created_at, transaction_date, from_account_number, to_account_number, comment, balance_after)
+                        VALUES (?, ?, 'Transfer Out', ?, ?, ?, ?, ?, ?, ?)
+                    """, (next_transaction_id(conn), txn["account_number"], txn["amount"], display_datetime(), today_iso(), txn["account_number"], txn["to_account_number"], txn["comment"] or "", new_bal_from))
+                    conn.execute("""
+                        INSERT INTO transactions (transaction_id, account_number, transaction_type, amount, created_at, transaction_date, from_account_number, to_account_number, comment, balance_after)
+                        VALUES (?, ?, 'Transfer In', ?, ?, ?, ?, ?, ?, ?)
+                    """, (next_transaction_id(conn), txn["to_account_number"], txn["amount"], display_datetime(), today_iso(), txn["account_number"], txn["to_account_number"], txn["comment"] or "", new_bal_to))
+                    conn.execute("UPDATE ro_transactions SET status='Approved', decided_at=? WHERE txn_id=?", (display_datetime(), txn_id))
+                    conn.commit()
+                    flash("Transfer approved and processed.", "success")
                 else:
-                    new_balance = account["balance"]
-                conn.execute("UPDATE accounts SET balance=? WHERE account_number=?", (new_balance, txn["account_number"]))
-                conn.execute("""
-                    INSERT INTO transactions (transaction_id, account_number, transaction_type, amount, created_at, transaction_date, balance_after)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                """, (next_transaction_id(conn), txn["account_number"], txn["transaction_type"], txn["amount"], display_datetime(), today_iso(), new_balance))
-            conn.execute("UPDATE ro_transactions SET status='Approved', decided_at=? WHERE txn_id=?", (display_datetime(), txn_id))
-            conn.commit()
-            flash("Transaction approved and processed.", "success")
+                    flash("One or both accounts not found.", "danger")
+
+            elif txn_type == "Open Account":
+                customer = conn.execute("SELECT * FROM customers WHERE customer_id=?", (txn["customer_id"],)).fetchone()
+                if customer:
+                    existing = conn.execute("SELECT * FROM accounts WHERE customer_id=?", (txn["customer_id"],)).fetchone()
+                    if existing:
+                        flash(f"Customer already has account {existing['account_number']}.", "warning")
+                        conn.execute("UPDATE ro_transactions SET status='Rejected', reject_reason='Customer already has an account', decided_at=? WHERE txn_id=?", (display_datetime(), txn_id))
+                        conn.commit()
+                    else:
+                        account_number = generate_account_number()
+                        conn.execute("""
+                            INSERT INTO accounts (account_number, customer_id, customer_name, account_type, balance, opened_at, opened_date)
+                            VALUES (?, ?, ?, 'Savings', 0, ?, ?)
+                        """, (account_number, customer["customer_id"], customer["full_name"], display_datetime(), today_iso()))
+                        conn.execute("UPDATE ro_transactions SET status='Approved', decided_at=? WHERE txn_id=?", (display_datetime(), txn_id))
+                        conn.commit()
+                        flash(f"Account {account_number} opened for {customer['full_name']}.", "success")
+                else:
+                    flash("Customer not found.", "danger")
+
         elif txn and action == "reject":
-            conn.execute("UPDATE ro_transactions SET status='Rejected', decided_at=? WHERE txn_id=?", (display_datetime(), txn_id))
+            conn.execute("UPDATE ro_transactions SET status='Rejected', reject_reason=?, decided_at=? WHERE txn_id=?",
+                         (reject_reason or "Rejected by manager", display_datetime(), txn_id))
             conn.commit()
             flash("Transaction rejected.", "warning")
+
     pending = conn.execute("SELECT * FROM ro_transactions WHERE status='Pending Approval' ORDER BY id DESC").fetchall()
-    history = conn.execute("SELECT * FROM ro_transactions WHERE status!='Pending Approval' ORDER BY id DESC LIMIT 30").fetchall()
+    history = conn.execute("SELECT * FROM ro_transactions WHERE status!='Pending Approval' ORDER BY id DESC LIMIT 50").fetchall()
     conn.close()
     return render_template("manager_ro_transactions.html", pending=pending, history=history)
 

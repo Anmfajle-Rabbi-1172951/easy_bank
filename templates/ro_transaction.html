@@ -2,7 +2,7 @@
 {% block content %}
 <div class="container mt-4">
   <div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0">Submit Transaction</h4>
+    <h4 class="mb-0">Submit Request</h4>
     <a href="{{ url_for('ro_dashboard') }}" class="btn btn-outline-secondary btn-sm">Back to Dashboard</a>
   </div>
 
@@ -13,40 +13,145 @@
   {% endwith %}
 
   <div class="row">
-    <div class="col-md-6">
+    <div class="col-md-7">
       <div class="card shadow-sm">
         <div class="card-body p-4">
-          <div class="alert alert-info small">
-            All transactions require manager authorisation before they are processed.
+          <div class="alert alert-info small mb-3">
+            <strong>All requests require manager authorisation</strong> before they are processed. The manager will see your request in their inbox.
           </div>
-          <form method="POST">
+          <form method="POST" id="ro-form">
+
+            <!-- Transaction Type Selector -->
             <div class="mb-3">
-              <label class="form-label">Account Number</label>
-              <select name="account_number" class="form-select" required>
-                <option value="">Select account...</option>
-                {% for acc in accounts %}
-                  <option value="{{ acc.account_number }}">
-                    {{ acc.account_number }} — {{ acc.customer_name }} (NZ${{ "%.2f"|format(acc.balance) }})
-                  </option>
+              <label class="form-label fw-semibold">Request Type</label>
+              <div class="d-flex gap-2 flex-wrap">
+                {% for t in ['Deposit','Withdraw','Transfer','Open Account'] %}
+                <div class="form-check form-check-inline border rounded px-3 py-2" style="cursor:pointer" onclick="setType('{{ t }}')">
+                  <input class="form-check-input" type="radio" name="transaction_type" id="type_{{ loop.index }}" value="{{ t }}" {% if loop.first %}checked{% endif %} required>
+                  <label class="form-check-label" for="type_{{ loop.index }}" style="cursor:pointer">
+                    {% if t == 'Deposit' %}💰{% elif t == 'Withdraw' %}💸{% elif t == 'Transfer' %}🔁{% else %}🏦{% endif %}
+                    {{ t }}
+                  </label>
+                </div>
                 {% endfor %}
-              </select>
+              </div>
             </div>
+
+            <!-- Deposit / Withdraw fields -->
+            <div id="section-dw">
+              <div class="mb-3">
+                <label class="form-label">Account Number</label>
+                <select name="account_number" class="form-select">
+                  <option value="">Select account...</option>
+                  {% for acc in accounts %}
+                    <option value="{{ acc.account_number }}">
+                      {{ acc.account_number }} — {{ acc.customer_name }} (NZ${{ "%.2f"|format(acc.balance) }})
+                    </option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Amount (NZD)</label>
+                <input type="number" name="amount" class="form-control" placeholder="0.00" min="0.01" step="0.01">
+              </div>
+            </div>
+
+            <!-- Transfer fields -->
+            <div id="section-transfer" style="display:none">
+              <div class="mb-3">
+                <label class="form-label">From Account</label>
+                <select name="from_account_number" class="form-select">
+                  <option value="">Select source account...</option>
+                  {% for acc in accounts %}
+                    <option value="{{ acc.account_number }}">
+                      {{ acc.account_number }} — {{ acc.customer_name }} (NZ${{ "%.2f"|format(acc.balance) }})
+                    </option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">To Account</label>
+                <select name="to_account_number" class="form-select">
+                  <option value="">Select destination account...</option>
+                  {% for acc in accounts %}
+                    <option value="{{ acc.account_number }}">
+                      {{ acc.account_number }} — {{ acc.customer_name }}
+                    </option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Amount (NZD)</label>
+                <input type="number" name="amount_transfer" class="form-control" placeholder="0.00" min="0.01" step="0.01">
+              </div>
+            </div>
+
+            <!-- Open Account fields -->
+            <div id="section-openac" style="display:none">
+              {% if customers_no_account %}
+              <div class="mb-3">
+                <label class="form-label">Select Active Customer (no account yet)</label>
+                <select name="customer_id" class="form-select">
+                  <option value="">Select customer...</option>
+                  {% for c in customers_no_account %}
+                    <option value="{{ c.customer_id }}">{{ c.customer_id }} — {{ c.full_name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              {% else %}
+              <div class="alert alert-warning small">No active customers without an account found.</div>
+              {% endif %}
+            </div>
+
+            <!-- Comment (all types) -->
             <div class="mb-3">
-              <label class="form-label">Transaction Type</label>
-              <select name="transaction_type" class="form-select" required>
-                <option>Deposit</option>
-                <option>Withdraw</option>
-              </select>
+              <label class="form-label">Comment <span class="text-muted small">(optional)</span></label>
+              <input type="text" name="comment" class="form-control" placeholder="Add a note for the manager...">
             </div>
-            <div class="mb-3">
-              <label class="form-label">Amount (NZD)</label>
-              <input type="number" name="amount" class="form-control" placeholder="0.00" min="0.01" step="0.01" required>
-            </div>
-            <button type="submit" class="btn btn-primary w-100">Submit for Approval</button>
+
+            <button type="submit" class="btn btn-primary w-100">Submit for Manager Approval</button>
           </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-5 mt-4 mt-md-0">
+      <div class="card bg-light border-0">
+        <div class="card-body">
+          <h6 class="fw-semibold mb-3">Request Types</h6>
+          <dl class="small mb-0">
+            <dt>💰 Deposit</dt>
+            <dd class="text-muted">Add funds to a customer account</dd>
+            <dt>💸 Withdraw</dt>
+            <dd class="text-muted">Remove funds from a customer account</dd>
+            <dt>🔁 Transfer</dt>
+            <dd class="text-muted">Move funds between two accounts</dd>
+            <dt>🏦 Open Account</dt>
+            <dd class="text-muted">Open a new savings account for an active customer who doesn't have one yet</dd>
+          </dl>
         </div>
       </div>
     </div>
   </div>
 </div>
+
+<script>
+function setType(t) {
+  document.getElementById('section-dw').style.display = (t==='Deposit'||t==='Withdraw') ? '' : 'none';
+  document.getElementById('section-transfer').style.display = (t==='Transfer') ? '' : 'none';
+  document.getElementById('section-openac').style.display = (t==='Open Account') ? '' : 'none';
+  // sync radio
+  document.querySelectorAll('input[name="transaction_type"]').forEach(r => { r.checked = r.value===t; });
+  // fix amount field for transfer
+  var amtDW = document.querySelector('[name="amount"]');
+  var amtTR = document.querySelector('[name="amount_transfer"]');
+  if(t==='Transfer') { amtDW.name='amount_hidden'; amtTR.name='amount'; }
+  else { amtDW.name='amount'; amtTR.name='amount_transfer'; }
+}
+// init
+document.querySelectorAll('input[name="transaction_type"]').forEach(r => {
+  r.addEventListener('change', () => setType(r.value));
+});
+setType('Deposit');
+</script>
 {% endblock %}

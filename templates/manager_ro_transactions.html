@@ -2,7 +2,7 @@
 {% block content %}
 <div class="container mt-4">
   <div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0">RO Transaction Authorisation</h4>
+    <h4 class="mb-0">RO Request Authorisation</h4>
     <a href="{{ url_for('home') }}" class="btn btn-outline-secondary btn-sm">Back to Home</a>
   </div>
 
@@ -15,40 +15,65 @@
   <!-- Pending -->
   <div class="card mb-4">
     <div class="card-header bg-warning text-dark">
-      <strong>Awaiting Approval ({{ pending | length }})</strong>
+      <strong>Awaiting Your Approval ({{ pending | length }})</strong>
     </div>
     <div class="card-body p-0">
       {% if pending %}
-      <table class="table table-hover mb-0">
+      <table class="table table-hover mb-0 align-middle">
         <thead class="table-light">
           <tr>
             <th>RO</th>
-            <th>Account</th>
             <th>Type</th>
+            <th>Details</th>
             <th>Amount</th>
+            <th>Comment</th>
             <th>Submitted</th>
-            <th>Action</th>
+            <th style="min-width:200px">Action</th>
           </tr>
         </thead>
         <tbody>
           {% for t in pending %}
           <tr>
-            <td>{{ t.ro_name }} <small class="text-muted">({{ t.ro_id }})</small></td>
-            <td>{{ t.account_number }}</td>
-            <td>{{ t.transaction_type }}</td>
-            <td>NZ${{ "%.2f"|format(t.amount) }}</td>
+            <td>
+              <strong>{{ t.ro_name }}</strong><br>
+              <small class="text-muted">{{ t.ro_id }}</small>
+            </td>
+            <td>
+              {% if t.transaction_type == 'Deposit' %}<span class="badge bg-success">💰 Deposit</span>
+              {% elif t.transaction_type == 'Withdraw' %}<span class="badge bg-warning text-dark">💸 Withdraw</span>
+              {% elif t.transaction_type == 'Transfer' %}<span class="badge bg-info text-dark">🔁 Transfer</span>
+              {% else %}<span class="badge bg-primary">🏦 Open Account</span>{% endif %}
+            </td>
+            <td>
+              {% if t.transaction_type == 'Transfer' %}
+                <small>{{ t.account_number }} → {{ t.to_account_number or '?' }}</small>
+              {% elif t.transaction_type == 'Open Account' %}
+                <small>{{ t.customer_id }} – {{ t.customer_name }}</small>
+              {% else %}
+                <small>{{ t.account_number }}</small>
+              {% endif %}
+            </td>
+            <td>
+              {% if t.transaction_type == 'Open Account' %}
+                <span class="text-muted">—</span>
+              {% else %}
+                NZ${{ "%.2f"|format(t.amount) }}
+              {% endif %}
+            </td>
+            <td><small class="text-muted">{{ t.comment or '—' }}</small></td>
             <td><small>{{ t.submitted_at }}</small></td>
             <td>
-              <div class="d-flex gap-1">
+              <div class="d-flex flex-column gap-1">
                 <form method="POST" class="d-inline">
                   <input type="hidden" name="txn_id" value="{{ t.txn_id }}">
                   <input type="hidden" name="action" value="approve">
-                  <button type="submit" class="btn btn-sm btn-success">Approve</button>
+                  <button type="submit" class="btn btn-sm btn-success w-100">✓ Approve</button>
                 </form>
-                <form method="POST" class="d-inline">
+                <form method="POST" class="d-inline" onsubmit="return confirmReject(this)">
                   <input type="hidden" name="txn_id" value="{{ t.txn_id }}">
                   <input type="hidden" name="action" value="reject">
-                  <button type="submit" class="btn btn-sm btn-danger">Reject</button>
+                  <input type="hidden" name="reject_reason" class="reject-reason-field">
+                  <button type="submit" class="btn btn-sm btn-danger w-100">✗ Reject</button>
                 </form>
               </div>
             </td>
@@ -57,37 +82,54 @@
         </tbody>
       </table>
       {% else %}
-        <p class="text-muted p-3 mb-0">No pending transactions.</p>
+        <p class="text-muted p-3 mb-0">No pending requests. All clear!</p>
       {% endif %}
     </div>
   </div>
 
   <!-- History -->
   <div class="card">
-    <div class="card-header"><strong>Transaction History</strong></div>
+    <div class="card-header"><strong>Decision History (last 50)</strong></div>
     <div class="card-body p-0">
       {% if history %}
-      <table class="table table-hover mb-0">
+      <table class="table table-hover mb-0 align-middle">
         <thead class="table-light">
           <tr>
             <th>RO</th>
-            <th>Account</th>
             <th>Type</th>
+            <th>Details</th>
             <th>Amount</th>
             <th>Submitted</th>
             <th>Decided</th>
             <th>Status</th>
+            <th>Reject Reason</th>
           </tr>
         </thead>
         <tbody>
           {% for t in history %}
           <tr>
             <td>{{ t.ro_name }}</td>
-            <td>{{ t.account_number }}</td>
-            <td>{{ t.transaction_type }}</td>
-            <td>NZ${{ "%.2f"|format(t.amount) }}</td>
+            <td>
+              {% if t.transaction_type == 'Deposit' %}<span class="badge bg-success">Deposit</span>
+              {% elif t.transaction_type == 'Withdraw' %}<span class="badge bg-warning text-dark">Withdraw</span>
+              {% elif t.transaction_type == 'Transfer' %}<span class="badge bg-info text-dark">Transfer</span>
+              {% else %}<span class="badge bg-primary">Open Acct</span>{% endif %}
+            </td>
+            <td>
+              {% if t.transaction_type == 'Transfer' %}
+                <small>{{ t.account_number }} → {{ t.to_account_number or '?' }}</small>
+              {% elif t.transaction_type == 'Open Account' %}
+                <small>{{ t.customer_id }}</small>
+              {% else %}
+                <small>{{ t.account_number }}</small>
+              {% endif %}
+            </td>
+            <td>
+              {% if t.transaction_type == 'Open Account' %}—
+              {% else %}NZ${{ "%.2f"|format(t.amount) }}{% endif %}
+            </td>
             <td><small>{{ t.submitted_at }}</small></td>
-            <td><small>{{ t.decided_at or '-' }}</small></td>
+            <td><small>{{ t.decided_at or '—' }}</small></td>
             <td>
               {% if t.status == 'Approved' %}
                 <span class="badge bg-success">Approved</span>
@@ -95,6 +137,7 @@
                 <span class="badge bg-danger">Rejected</span>
               {% endif %}
             </td>
+            <td><small class="text-muted">{{ t.reject_reason or '—' }}</small></td>
           </tr>
           {% endfor %}
         </tbody>
@@ -105,4 +148,13 @@
     </div>
   </div>
 </div>
+
+<script>
+function confirmReject(form) {
+  var reason = prompt('Reason for rejection (optional):');
+  if (reason === null) return false; // cancelled
+  form.querySelector('.reject-reason-field').value = reason || 'Rejected by manager';
+  return true;
+}
+</script>
 {% endblock %}

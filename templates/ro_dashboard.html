@@ -82,7 +82,7 @@
           <tr>
             <td><small>{{ t.txn_id }}</small></td>
             <td>{{ t.account_number }}</td>
-            <td>{{ t.transaction_type }}</td>
+            <td>{{ t.transaction_type }}{% if t.transaction_type == "Transfer" and t.to_account_number %} → {{ t.to_account_number }}{% endif %}</td>
             <td>NZ${{ "%.2f"|format(t.amount) }}</td>
             <td><small>{{ t.submitted_at }}</small></td>
             <td>
