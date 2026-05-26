@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">My Messages</h4>
+    <a href="{{ url_for('ro_dashboard') }}" class="btn btn-outline-secondary btn-sm">Back to Dashboard</a>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  {% if msgs %}
+    {% for msg in msgs %}
+    <div class="card mb-3 {% if not msg.is_read %}border-primary{% endif %}">
+      <div class="card-body">
+        <div class="d-flex justify-content-between mb-2">
+          <strong>From: Manager</strong>
+          <small class="text-muted">{{ msg.sent_at }}</small>
+        </div>
+        <p class="mb-2">{{ msg.body }}</p>
+        {% if msg.temp_password %}
+        <div class="alert alert-warning mb-0">
+          <strong>Temporary password:</strong>
+          <code>{{ msg.temp_password }}</code>
+          <div class="small mt-1 text-muted">You must change this password on your next login.</div>
+        </div>
+        {% endif %}
+        {% if not msg.is_read %}
+          <span class="badge bg-primary mt-2">New</span>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="card">
+      <div class="card-body text-muted">No messages yet.</div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

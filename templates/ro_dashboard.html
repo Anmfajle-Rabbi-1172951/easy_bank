@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h4 class="mb-0">Welcome, {{ ro.full_name }}</h4>
+      <small class="text-muted">{{ ro.ro_id }} &middot; {{ ro.department }}</small>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('ro_messages') }}" class="btn btn-outline-secondary btn-sm">
+        Messages
+        {% if unread > 0 %}
+          <span class="badge bg-danger">{{ unread }}</span>
+        {% endif %}
+      </a>
+      <a href="{{ url_for('ro_logout') }}" class="btn btn-outline-danger btn-sm">Sign Out</a>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <!-- Stats -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="card bg-light">
+        <div class="card-body">
+          <p class="text-muted small mb-1">My transactions</p>
+          <h3>{{ my_txns | length }}</h3>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card bg-light">
+        <div class="card-body">
+          <p class="text-muted small mb-1">Pending approval</p>
+          <h3>{{ my_txns | selectattr('status', 'equalto', 'Pending Approval') | list | length }}</h3>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card bg-light">
+        <div class="card-body">
+          <p class="text-muted small mb-1">Unread messages</p>
+          <h3>{{ unread }}</h3>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="mb-4">
+    <a href="{{ url_for('ro_transaction') }}" class="btn btn-primary me-2">
+      + Submit Transaction
+    </a>
+    <a href="{{ url_for('ro_messages') }}" class="btn btn-outline-primary">
+      View Messages
+    </a>
+  </div>
+
+  <!-- Recent Transactions -->
+  <div class="card">
+    <div class="card-header"><strong>My Recent Transactions</strong></div>
+    <div class="card-body p-0">
+      {% if my_txns %}
+      <table class="table table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>ID</th>
+            <th>Account</th>
+            <th>Type</th>
+            <th>Amount</th>
+            <th>Submitted</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in my_txns %}
+          <tr>
+            <td><small>{{ t.txn_id }}</small></td>
+            <td>{{ t.account_number }}</td>
+            <td>{{ t.transaction_type }}</td>
+            <td>NZ${{ "%.2f"|format(t.amount) }}</td>
+            <td><small>{{ t.submitted_at }}</small></td>
+            <td>
+              {% if t.status == 'Pending Approval' %}
+                <span class="badge bg-warning text-dark">Pending</span>
+              {% elif t.status == 'Approved' %}
+                <span class="badge bg-success">Approved</span>
+              {% else %}
+                <span class="badge bg-danger">Rejected</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+        <p class="text-muted p-3 mb-0">No transactions submitted yet.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

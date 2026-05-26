@@ -256,10 +256,31 @@ def create_pdf_response(title, subtitle, table_data, filename):
 @app.context_processor
 def inject_bank_details():
     unread_count = 0
+    pending_ro_txn_count = 0
+    pending_reset_count = 0
+    ro_unread_count = 0
     if is_manager_logged_in():
         try:
             conn = get_db_connection()
-            unread_count = conn.execute("SELECT COUNT(*) FROM enquiries WHERE is_read=0").fetchone()[0]
+            unread_count = conn.execute(
+                "SELECT COUNT(*) FROM enquiries WHERE is_read=0"
+            ).fetchone()[0]
+            pending_ro_txn_count = conn.execute(
+                "SELECT COUNT(*) FROM ro_transactions WHERE status='Pending Approval'"
+            ).fetchone()[0]
+            pending_reset_count = conn.execute(
+                "SELECT COUNT(*) FROM ro_password_resets WHERE status='Pending'"
+            ).fetchone()[0]
+            conn.close()
+        except Exception:
+            pass
+    if is_ro_logged_in():
+        try:
+            conn = get_db_connection()
+            ro_unread_count = conn.execute(
+                "SELECT COUNT(*) FROM ro_messages WHERE to_ro_id=? AND is_read=0",
+                (get_logged_ro_id(),)
+            ).fetchone()[0]
             conn.close()
         except Exception:
             pass
@@ -277,6 +298,11 @@ def inject_bank_details():
         logged_customer_id=get_logged_customer_id(),
         logged_customer_name=session.get("customer_name"),
         unread_inbox_count=unread_count,
+        ro_logged_in=is_ro_logged_in(),
+        ro_logged_name=session.get("ro_name"),
+        ro_unread_count=ro_unread_count,
+        pending_ro_txn_count=pending_ro_txn_count,
+        pending_reset_count=pending_reset_count,
     )
 
 
