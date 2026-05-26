@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-4">
+      <div class="card shadow">
+        <div class="card-body p-4">
+          <h4 class="text-center mb-1">RO Login</h4>
+          <p class="text-center text-muted small mb-4">Relationship Officer Portal</p>
+          {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+          {% endwith %}
+          <form method="POST">
+            <div class="mb-3">
+              <label class="form-label">RO ID</label>
+              <input type="text" name="ro_id" class="form-control" placeholder="e.g. RO-001" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Password</label>
+              <input type="password" name="password" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-success w-100">Sign In</button>
+          </form>
+          <div class="text-center mt-3">
+            <a href="{{ url_for('ro_forgot_password') }}" class="small">Forgot password?</a>
+          </div>
+          <div class="text-center mt-2">
+            <a href="{{ url_for('login_page') }}" class="small text-muted">Manager login</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

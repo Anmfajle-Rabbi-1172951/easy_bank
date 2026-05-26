@@ -877,6 +877,386 @@ def delete_enquiry(enquiry_id):
 
 
 init_db()
+# ============ RO MANAGEMENT ============
 
+def init_ro_db():
+    conn = get_db_connection()
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS ro_staff (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ro_id TEXT NOT NULL UNIQUE,
+            full_name TEXT NOT NULL,
+            email TEXT NOT NULL,
+            phone TEXT NOT NULL,
+            department TEXT NOT NULL,
+            password_hash TEXT NOT NULL,
+            must_change_password INTEGER NOT NULL DEFAULT 1,
+            status TEXT NOT NULL DEFAULT 'Active',
+            created_at TEXT NOT NULL,
+            last_login TEXT
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS ro_transactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            txn_id TEXT NOT NULL UNIQUE,
+            ro_id TEXT NOT NULL,
+            ro_name TEXT NOT NULL,
+            account_number TEXT NOT NULL,
+            transaction_type TEXT NOT NULL,
+            amount REAL NOT NULL,
+            status TEXT NOT NULL DEFAULT 'Pending Approval',
+            submitted_at TEXT NOT NULL,
+            decided_at TEXT
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS ro_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            to_ro_id TEXT NOT NULL,
+            body TEXT NOT NULL,
+            temp_password TEXT,
+            sent_at TEXT NOT NULL,
+            is_read INTEGER NOT NULL DEFAULT 0
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS ro_password_resets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ro_id TEXT NOT NULL,
+            ro_name TEXT NOT NULL,
+            requested_at TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'Pending'
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+
+def generate_ro_id():
+    conn = get_db_connection()
+    row = conn.execute("SELECT ro_id FROM ro_staff ORDER BY id DESC LIMIT 1").fetchone()
+    conn.close()
+    if row is None:
+        return "RO-001"
+    last_num = int(row["ro_id"].replace("RO-", ""))
+    return f"RO-{last_num + 1:03d}"
+
+
+def is_ro_logged_in():
+    return session.get("ro_logged_in") is True
+
+
+def get_logged_ro_id():
+    return session.get("ro_id")
+
+
+def ro_login_required(view_function):
+    @wraps(view_function)
+    def wrapped_view(*args, **kwargs):
+        if not is_ro_logged_in():
+            flash("Please login as RO first.", "warning")
+            return redirect(url_for("ro_login_page"))
+        return view_function(*args, **kwargs)
+    return wrapped_view
+
+
+# ---- RO Login ----
+@app.route("/ro/login", methods=["GET", "POST"])
+def ro_login_page():
+    if is_ro_logged_in():
+        return redirect(url_for("ro_dashboard"))
+    if request.method == "POST":
+        ro_id = request.form.get("ro_id", "").strip().upper()
+        password = request.form.get("password", "")
+        conn = get_db_connection()
+        ro = conn.execute("SELECT * FROM ro_staff WHERE ro_id=? AND status='Active'", (ro_id,)).fetchone()
+        conn.close()
+        if ro and check_password_hash(ro["password_hash"], password):
+            session.clear()
+            session["ro_logged_in"] = True
+            session["ro_id"] = ro["ro_id"]
+            session["ro_name"] = ro["full_name"]
+            conn = get_db_connection()
+            conn.execute("UPDATE ro_staff SET last_login=? WHERE ro_id=?", (display_datetime(), ro_id))
+            conn.commit()
+            conn.close()
+            if ro["must_change_password"]:
+                return redirect(url_for("ro_change_password"))
+            flash("Welcome back, " + ro["full_name"] + "!", "success")
+            return redirect(url_for("ro_dashboard"))
+        flash("Invalid RO ID or password.", "danger")
+    return render_template("ro_login.html")
+
+
+# ---- RO Force Change Password ----
+@app.route("/ro/change-password", methods=["GET", "POST"])
+@ro_login_required
+def ro_change_password():
+    if request.method == "POST":
+        new_password = request.form.get("new_password", "")
+        confirm_password = request.form.get("confirm_password", "")
+        if len(new_password) < 8:
+            flash("Password must be at least 8 characters.", "danger")
+        elif new_password == "12345678":
+            flash("You cannot reuse the temporary password.", "danger")
+        elif new_password != confirm_password:
+            flash("Passwords do not match.", "danger")
+        else:
+            conn = get_db_connection()
+            conn.execute(
+                "UPDATE ro_staff SET password_hash=?, must_change_password=0 WHERE ro_id=?",
+                (generate_password_hash(new_password), get_logged_ro_id())
+            )
+            conn.commit()
+            conn.close()
+            flash("Password changed successfully. Welcome!", "success")
+            return redirect(url_for("ro_dashboard"))
+    return render_template("ro_change_password.html")
+
+
+# ---- RO Forgot Password Request ----
+@app.route("/ro/forgot-password", methods=["GET", "POST"])
+def ro_forgot_password():
+    if request.method == "POST":
+        ro_id = request.form.get("ro_id", "").strip().upper()
+        conn = get_db_connection()
+        ro = conn.execute("SELECT * FROM ro_staff WHERE ro_id=?", (ro_id,)).fetchone()
+        existing = conn.execute(
+            "SELECT * FROM ro_password_resets WHERE ro_id=? AND status='Pending'", (ro_id,)
+        ).fetchone()
+        conn.close()
+        if not ro:
+            flash("RO ID not found.", "danger")
+        elif existing:
+            flash("A reset request is already pending. Please wait for manager approval.", "warning")
+        else:
+            conn = get_db_connection()
+            conn.execute(
+                "INSERT INTO ro_password_resets (ro_id, ro_name, requested_at, status) VALUES (?, ?, ?, 'Pending')",
+                (ro_id, ro["full_name"], display_datetime())
+            )
+            conn.commit()
+            conn.close()
+            flash("Reset request sent to manager. You will receive a message when approved.", "success")
+            return redirect(url_for("ro_login_page"))
+    return render_template("ro_forgot_password.html")
+
+
+# ---- RO Logout ----
+@app.route("/ro/logout")
+def ro_logout():
+    session.clear()
+    flash("You have logged out.", "success")
+    return redirect(url_for("ro_login_page"))
+
+
+# ---- RO Dashboard ----
+@app.route("/ro/dashboard")
+@ro_login_required
+def ro_dashboard():
+    ro_id = get_logged_ro_id()
+    conn = get_db_connection()
+    ro = conn.execute("SELECT * FROM ro_staff WHERE ro_id=?", (ro_id,)).fetchone()
+    my_txns = conn.execute(
+        "SELECT * FROM ro_transactions WHERE ro_id=? ORDER BY id DESC LIMIT 20", (ro_id,)
+    ).fetchall()
+    my_messages = conn.execute(
+        "SELECT * FROM ro_messages WHERE to_ro_id=? ORDER BY id DESC", (ro_id,)
+    ).fetchall()
+    unread = conn.execute(
+        "SELECT COUNT(*) FROM ro_messages WHERE to_ro_id=? AND is_read=0", (ro_id,)
+    ).fetchone()[0]
+    conn.close()
+    return render_template("ro_dashboard.html", ro=ro, my_txns=my_txns, my_messages=my_messages, unread=unread)
+
+
+# ---- RO Submit Transaction ----
+@app.route("/ro/transaction", methods=["GET", "POST"])
+@ro_login_required
+def ro_transaction():
+    ro_id = get_logged_ro_id()
+    conn = get_db_connection()
+    ro = conn.execute("SELECT * FROM ro_staff WHERE ro_id=?", (ro_id,)).fetchone()
+    accounts = conn.execute("SELECT * FROM accounts ORDER BY account_number").fetchall()
+    if request.method == "POST":
+        account_number = request.form.get("account_number", "").strip()
+        txn_type = request.form.get("transaction_type", "").strip()
+        try:
+            amount = float(request.form.get("amount") or 0)
+        except ValueError:
+            amount = 0
+        if not account_number or amount <= 0:
+            flash("Please select an account and enter a valid amount.", "danger")
+        else:
+            txn_id = "RO-TXN-" + str(int(display_datetime().replace(" ", "").replace(":", "").replace("-", "")))
+            conn.execute("""
+                INSERT INTO ro_transactions (txn_id, ro_id, ro_name, account_number, transaction_type, amount, status, submitted_at)
+                VALUES (?, ?, ?, ?, ?, ?, 'Pending Approval', ?)
+            """, (txn_id, ro_id, ro["full_name"], account_number, txn_type, amount, display_datetime()))
+            conn.commit()
+            flash("Transaction submitted for manager approval.", "success")
+            return redirect(url_for("ro_transaction"))
+    conn.close()
+    return render_template("ro_transaction.html", ro=ro, accounts=accounts)
+
+
+# ---- RO Messages ----
+@app.route("/ro/messages")
+@ro_login_required
+def ro_messages():
+    ro_id = get_logged_ro_id()
+    conn = get_db_connection()
+    ro = conn.execute("SELECT * FROM ro_staff WHERE ro_id=?", (ro_id,)).fetchone()
+    msgs = conn.execute(
+        "SELECT * FROM ro_messages WHERE to_ro_id=? ORDER BY id DESC", (ro_id,)
+    ).fetchall()
+    conn.execute("UPDATE ro_messages SET is_read=1 WHERE to_ro_id=?", (ro_id,))
+    conn.commit()
+    conn.close()
+    return render_template("ro_messages.html", ro=ro, msgs=msgs)
+
+
+# ---- Manager: RO Management Page ----
+@app.route("/manager/ro-management", methods=["GET", "POST"])
+@manager_login_required
+def manager_ro_management():
+    conn = get_db_connection()
+    if request.method == "POST":
+        action = request.form.get("action")
+        if action == "add_ro":
+            full_name = request.form.get("full_name", "").strip()
+            email = request.form.get("email", "").strip()
+            phone = request.form.get("phone", "").strip()
+            department = request.form.get("department", "").strip()
+            if not full_name or not email or not phone:
+                flash("All fields are required.", "danger")
+            else:
+                new_ro_id = generate_ro_id()
+                conn.execute("""
+                    INSERT INTO ro_staff (ro_id, full_name, email, phone, department, password_hash, must_change_password, status, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, 1, 'Active', ?)
+                """, (new_ro_id, full_name, email, phone, department, generate_password_hash("12345678"), display_datetime()))
+                conn.commit()
+                flash(f"RO created: {new_ro_id}. Temporary password: 12345678", "success")
+        elif action == "toggle_status":
+            ro_id = request.form.get("ro_id")
+            ro = conn.execute("SELECT * FROM ro_staff WHERE ro_id=?", (ro_id,)).fetchone()
+            new_status = "Inactive" if ro["status"] == "Active" else "Active"
+            conn.execute("UPDATE ro_staff SET status=? WHERE ro_id=?", (new_status, ro_id))
+            conn.commit()
+            flash(f"RO {ro_id} is now {new_status}.", "success")
+        elif action == "reset_password":
+            ro_id = request.form.get("ro_id")
+            ro = conn.execute("SELECT * FROM ro_staff WHERE ro_id=?", (ro_id,)).fetchone()
+            conn.execute(
+                "UPDATE ro_staff SET password_hash=?, must_change_password=1 WHERE ro_id=?",
+                (generate_password_hash("12345678"), ro_id)
+            )
+            conn.execute("""
+                INSERT INTO ro_messages (to_ro_id, body, temp_password, sent_at, is_read)
+                VALUES (?, ?, ?, ?, 0)
+            """, (ro_id, "Your password has been reset by the manager. Please log in with your temporary password and change it immediately.", "12345678", display_datetime()))
+            conn.commit()
+            flash(f"Password reset for {ro['full_name']}. They have been notified.", "success")
+    ro_list = conn.execute("SELECT * FROM ro_staff ORDER BY id DESC").fetchall()
+    conn.close()
+    return render_template("manager_ro_management.html", ro_list=ro_list)
+
+
+# ---- Manager: Approve RO Transactions ----
+@app.route("/manager/ro-transactions", methods=["GET", "POST"])
+@manager_login_required
+def manager_ro_transactions():
+    conn = get_db_connection()
+    if request.method == "POST":
+        txn_id = request.form.get("txn_id")
+        action = request.form.get("action")
+        txn = conn.execute("SELECT * FROM ro_transactions WHERE txn_id=?", (txn_id,)).fetchone()
+        if txn and action == "approve":
+            account = conn.execute("SELECT * FROM accounts WHERE account_number=?", (txn["account_number"],)).fetchone()
+            if account:
+                if txn["transaction_type"] == "Deposit":
+                    new_balance = account["balance"] + txn["amount"]
+                elif txn["transaction_type"] == "Withdraw":
+                    if account["balance"] < txn["amount"]:
+                        flash("Insufficient balance for this withdrawal.", "danger")
+                        conn.close()
+                        return redirect(url_for("manager_ro_transactions"))
+                    new_balance = account["balance"] - txn["amount"]
+                else:
+                    new_balance = account["balance"]
+                conn.execute("UPDATE accounts SET balance=? WHERE account_number=?", (new_balance, txn["account_number"]))
+                conn.execute("""
+                    INSERT INTO transactions (transaction_id, account_number, transaction_type, amount, created_at, transaction_date, balance_after)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, (next_transaction_id(conn), txn["account_number"], txn["transaction_type"], txn["amount"], display_datetime(), today_iso(), new_balance))
+            conn.execute("UPDATE ro_transactions SET status='Approved', decided_at=? WHERE txn_id=?", (display_datetime(), txn_id))
+            conn.commit()
+            flash("Transaction approved and processed.", "success")
+        elif txn and action == "reject":
+            conn.execute("UPDATE ro_transactions SET status='Rejected', decided_at=? WHERE txn_id=?", (display_datetime(), txn_id))
+            conn.commit()
+            flash("Transaction rejected.", "warning")
+    pending = conn.execute("SELECT * FROM ro_transactions WHERE status='Pending Approval' ORDER BY id DESC").fetchall()
+    history = conn.execute("SELECT * FROM ro_transactions WHERE status!='Pending Approval' ORDER BY id DESC LIMIT 30").fetchall()
+    conn.close()
+    return render_template("manager_ro_transactions.html", pending=pending, history=history)
+
+
+# ---- Manager: Password Reset Requests ----
+@app.route("/manager/ro-resets", methods=["GET", "POST"])
+@manager_login_required
+def manager_ro_resets():
+    conn = get_db_connection()
+    if request.method == "POST":
+        reset_id = request.form.get("reset_id")
+        action = request.form.get("action")
+        req = conn.execute("SELECT * FROM ro_password_resets WHERE id=?", (reset_id,)).fetchone()
+        if req and action == "approve":
+            conn.execute(
+                "UPDATE ro_staff SET password_hash=?, must_change_password=1 WHERE ro_id=?",
+                (generate_password_hash("12345678"), req["ro_id"])
+            )
+            conn.execute("""
+                INSERT INTO ro_messages (to_ro_id, body, temp_password, sent_at, is_read)
+                VALUES (?, ?, ?, ?, 0)
+            """, (req["ro_id"], "Your password reset request has been approved. Please log in with your temporary password and change it immediately.", "12345678", display_datetime()))
+            conn.execute("UPDATE ro_password_resets SET status='Approved' WHERE id=?", (reset_id,))
+            conn.commit()
+            flash("Password reset approved and RO notified.", "success")
+        elif req and action == "deny":
+            conn.execute("UPDATE ro_password_resets SET status='Denied' WHERE id=?", (reset_id,))
+            conn.commit()
+            flash("Reset request denied.", "warning")
+    resets = conn.execute("SELECT * FROM ro_password_resets ORDER BY id DESC").fetchall()
+    conn.close()
+    return render_template("manager_ro_resets.html", resets=resets)
+
+
+# ---- Manager: Send Message to RO ----
+@app.route("/manager/ro-messages", methods=["GET", "POST"])
+@manager_login_required
+def manager_ro_messages():
+    conn = get_db_connection()
+    if request.method == "POST":
+        to_ro_id = request.form.get("to_ro_id", "").strip()
+        body = request.form.get("body", "").strip()
+        if not to_ro_id or not body:
+            flash("Please select an RO and write a message.", "danger")
+        else:
+            conn.execute("""
+                INSERT INTO ro_messages (to_ro_id, body, sent_at, is_read)
+                VALUES (?, ?, ?, 0)
+            """, (to_ro_id, body, display_datetime()))
+            conn.commit()
+            flash("Message sent successfully.", "success")
+    ro_list = conn.execute("SELECT * FROM ro_staff WHERE status='Active' ORDER BY ro_id").fetchall()
+    messages = conn.execute("SELECT * FROM ro_messages ORDER BY id DESC LIMIT 50").fetchall()
+    conn.close()
+    return render_template("manager_ro_messages.html", ro_list=ro_list, messages=messages)
+
+
+init_ro_db()
 if __name__ == "__main__":
     app.run(debug=True)
