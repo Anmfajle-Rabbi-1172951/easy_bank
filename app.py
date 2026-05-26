@@ -1117,7 +1117,7 @@ def ro_transaction():
     if request.method == "POST":
         txn_type = request.form.get("transaction_type", "").strip()
         comment = request.form.get("comment", "").strip()
-        txn_id = "RO-TXN-" + str(int(display_datetime().replace(" ", "").replace(":", "").replace("-", "")))
+        txn_id = "RO-TXN-" + datetime.now().strftime("%Y%m%d%H%M%S%f")
 
         if txn_type in ("Deposit", "Withdraw"):
             account_number = request.form.get("account_number", "").strip()
